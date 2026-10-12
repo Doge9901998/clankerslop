@@ -355,12 +355,13 @@ $('ed').onclick=()=>{ed=ed==='al'?'bk':'al';applyTheme()};$('pg').onclick=()=>{p
 // ---------- install (PWA) + optional installer downloads ----------
 // To offer the Windows / Android installers on the site, host them (e.g. GitHub Releases) and put the URLs here,
 // or drop them in public/downloads/ as tp7-windows.zip and tp7.apk (each file must stay under the 25 MB Workers-assets limit).
-const DL={win:'',apk:''};
+const DL={win:'https://github.com/Doge9901998/clankerslop/releases/latest/download/tp7-portable.exe',apk:'https://github.com/Doge9901998/clankerslop/releases/latest/download/tp7.apk'};
 let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});
-const inApp=/Electron/i.test(navigator.userAgent)||!!window.Capacitor||matchMedia('(display-mode: standalone)').matches;
-if(inApp)$('inst').hidden=true;
-$('pwa').onclick=async()=>{if(ip){ip.prompt();ip=null}else msg(/iPhone|iPad|iPod/.test(navigator.userAgent)?'On iPhone/iPad: Share → Add to Home Screen.':'Use your browser menu → Install app (or Add to Home screen). It then works offline.')};
-[['dlw',DL.win,'downloads/tp7-windows.zip'],['dla',DL.apk,'downloads/tp7.apk']].forEach(([id,u,def])=>{const a=$(id);
+// inside the Windows (Electron) / Android (Capacitor WebView) apps or an installed PWA: no install/download buttons
+const inApp=/Electron/i.test(navigator.userAgent)||/; wv\)/.test(navigator.userAgent)||!!window.Capacitor||!!window.androidBridge||(location.protocol==='https:'&&location.hostname==='localhost')||matchMedia('(display-mode: standalone)').matches;
+if(inApp)$('inst').remove();
+if(!inApp)$('pwa').onclick=async()=>{if(ip){ip.prompt();ip=null}else msg(/iPhone|iPad|iPod/.test(navigator.userAgent)?'On iPhone/iPad: Share → Add to Home Screen.':'Use your browser menu → Install app (or Add to Home screen). It then works offline.')};
+if(!inApp)[['dlw',DL.win,'downloads/tp7-windows.zip'],['dla',DL.apk,'downloads/tp7.apk']].forEach(([id,u,def])=>{const a=$(id);
  if(u){a.href=u;a.hidden=false}
  else if(/^https?:/.test(location.protocol))fetch(def,{method:'HEAD'}).then(r=>{if(r.ok&&!/html/.test(r.headers.get('content-type')||'')){a.href=def;a.download='';a.hidden=false}}).catch(()=>{})});
 if('serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
