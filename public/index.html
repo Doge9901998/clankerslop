@@ -58,7 +58,7 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 .panel button,.file{height:36px;border:0;border-radius:9px;background:var(--pb);color:#eee;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .stat{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em}
 .row{display:flex;gap:8px;margin-bottom:8px}.row button{flex:1}
-#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on{background:#ff4f12}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
+#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on,#lm.on{background:#ff4f12}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
 .panel input[type=text]{flex:1;min-width:0;height:36px;border:0;border-radius:9px;padding:0 12px;font-size:13px;background:var(--pi);color:var(--pif);box-shadow:0 1px 3px #0003 inset}
 #msg{font-size:11px;min-height:14px;margin-top:8px;opacity:.7}
 #list{list-style:none;margin:12px 0 0;padding:0;font-size:12px;max-height:200px;overflow:auto}
@@ -86,7 +86,7 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 <div class="row"><button id="slow">◀ SLOW</button><button id="rate">1.00×</button><button id="fast">FAST ▶</button><button id="tape" title="Pitch follows speed">TAPE</button></div>
 <div class="row"><button id="pdn" title="Pitch down one semitone (,)">▼ PITCH</button><button id="pitch" title="Click to reset">+0 st</button><button id="pup" title="Pitch up one semitone (.)">PITCH ▲</button><button id="rev" title="Play backwards (R)">◀ REV</button></div>
 <div class="row"><input id="url" type="text" placeholder="Audio URL (mp3, wav, CDN…)" autocomplete="off"><button id="add" style="flex:0 0 auto">LOAD</button></div>
-<div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label></div>
+<div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label><button id="lm" title="Repeat mode: no loop / loop all / loop one / shuffle (L)">LOOP: OFF</button></div>
 <div class="row" id="inst" style="margin:8px 0 0"><button id="pwa" title="Install as an offline app">⬇ INSTALL</button><a class="file" id="dlw" hidden>WINDOWS</a><a class="file" id="dla" hidden>ANDROID</a></div>
 <div id="msg"></div><ol id="list"></ol></div>
 <script>
@@ -164,7 +164,7 @@ function startSrc(){killSrc();if(!E.buf||!ctx)return;const{s,d,q}=plan(),D=dur()
 function replan(){if(!E.on||!E.src)return;const{s,d,q}=plan();E.pos=Tb();
  if(d!==E.d0){startSrc();return}
  const t=ctx.currentTime;E.p0=E.pos;E.t0=t;E.s0=s;E.src.playbackRate.setValueAtTime(s,t);shift(q)}
-function ended(){const d=E.d0;E.on=false;E.src=null;E.pos=d>0?dur():0;if(E.ov==null&&d>0)step(1)}
+function ended(){const d=E.d0;E.on=false;E.src=null;E.pos=d>0?dur():0;if(E.ov!=null)return;if(d>0)auto();else if(d<0&&lm==='one')play()} // reverse + loop one: wrap back to the end
 function play(){if(!E.buf)return;if(ctx.state==='suspended')ctx.resume();
  if(rev&&E.pos<=.05)E.pos=dur();if(!rev&&E.pos>=dur()-.01)E.pos=0;E.on=true;startSrc()}
 function pause(){E.pos=Tb();E.on=false;killSrc()}
@@ -220,7 +220,7 @@ $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpe
 function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
 let LG=0;const MAXDEC=120e6; // files bigger than this stream through <audio> instead of being decoded to memory
 async function load(i,autoplay=true){
- if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];
+ if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];bag.add(t);
  if(t.blob&&!t.src){t.ready&&t.ready.then(()=>load(i,autoplay));return}
  const g=++LG;stopAll();
  $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';render();
@@ -243,7 +243,7 @@ function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode: this 
  // stage 0: direct (CORS) -> 1: via /api/proxy (real meter) -> 2: direct, simulated meter
  const attempt=stage=>{
   const a=new Audio(),src=stage===1?'/api/proxy?url='+encodeURIComponent(t.src):t.src;
-  if(stage<2&&!t.blob)a.crossOrigin='anonymous';a.src=src;a.preload='auto';a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);a.onended=()=>step(1);
+  if(stage<2&&!t.blob)a.crossOrigin='anonymous';a.src=src;a.preload='auto';a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);a.onended=auto;
   A=a;a.onerror=()=>{if(A!==a)return;if(!t.blob&&stage<2)attempt(stage+1);else msg('Could not load that audio.')};
   if(stage===2){fake=true;a.volume=vol}else{try{ctx.createMediaElementSource(a).connect(dry);bypass();a.volume=1;fake=false}catch(e){fake=true;a.volume=vol}}
   if(stage===2)bypass();
@@ -256,8 +256,33 @@ const D=()=>mode==='b'?dur():(A&&isFinite(A.duration)?A.duration:0);
 function seek(t){t=Math.min(Math.max(0,t),D()||t);if(mode==='b'){E.pos=t;if(E.on)startSrc()}else if(A)A.currentTime=t}
 function toggle(){if(cur<0){if(tracks.length)load(0);return}
  if(ctx&&ctx.state==='suspended')ctx.resume();
- if(mode==='b'){if(!E.buf)return;E.on?pause():play()}else if(A){A.paused?A.play():A.pause()}}
-function step(d){if(!tracks.length)return;const n=cur+d;if(n>=0&&n<tracks.length)load(n);else if(d>0){cur=-1;$('st').textContent='STOP'}}
+ if(mode==='b'){if(!E.buf){if(!A)load(cur);return}E.on?pause():play()}else if(A){A.paused?A.play():A.pause()}}
+// ---- repeat / shuffle ----
+// off = play through the list once, all = wrap around, one = repeat the current track, shuffle = random order forever
+const LMS=['off','all','one','shuffle'],LML={off:'LOOP: OFF',all:'LOOP: ALL',one:'LOOP: ONE',shuffle:'SHUFFLE'};
+let lm='off';try{const v=localStorage.getItem('tp7.loop');if(LMS.includes(v))lm=v}catch(e){}
+const bag=new Set(),hist=[]; // shuffle: tracks already played this round / tracks to go back to with PREV
+function setLm(m){lm=m;try{localStorage.setItem('tp7.loop',m)}catch(e){}bag.clear();hist.length=0;if(cur>=0&&tracks[cur])bag.add(tracks[cur]);
+ $('lm').textContent=LML[m];$('lm').classList.toggle('on',m!=='off')}
+$('lm').onclick=()=>{setLm(LMS[(LMS.indexOf(lm)+1)%LMS.length]);flash(LML[lm])};
+function pick(){const c=tracks[cur];let pool=tracks.filter(t=>!bag.has(t));
+ if(!pool.length){bag.clear();if(c)bag.add(c);pool=tracks.filter(t=>t!==c)} // everything played: start a new round, no immediate repeat
+ return tracks.indexOf(pool[Math.floor(Math.random()*pool.length)])}
+// a track reached its end by itself
+function auto(){if(!tracks.length)return;
+ if(lm==='one'&&cur>=0){if(mode==='b'&&E.buf){E.pos=0;play()}else if(A){A.currentTime=0;A.play().catch(()=>{})}return}
+ step(1)}
+// NEXT / PREV buttons (and auto-advance)
+function step(d){if(!tracks.length)return;
+ if(lm==='shuffle'&&tracks.length>1){
+  if(d<0){while(hist.length){const i=tracks.indexOf(hist.pop());if(i>=0&&i!==cur)return load(i)}return seek(0)}
+  if(cur>=0){hist.push(tracks[cur]);if(hist.length>200)hist.shift()}
+  return load(pick())}
+ const len=tracks.length,n=cur+d;
+ if(n>=0&&n<len)load(n);
+ else if(lm!=='off')load(((n%len)+len)%len); // wrap around
+ else if(d>0){cur=-1;$('st').textContent='STOP'}}
+setLm(lm);
 
 function add(t,play){tracks.push(t);save();render();if(play||cur<0)load(tracks.length-1)}
 function addUrl(u){u=u.trim();if(!u)return;
@@ -283,7 +308,7 @@ $('rec').onclick=async()=>{
   mr.start();$('rec').classList.add('on');if(playing())toggle()}catch(e){msg('Microphone access denied.')}};
 $('pp').onclick=toggle;$('prev').onclick=()=>T()>3?seek(0):step(-1);$('next').onclick=()=>step(1);
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();toggle()}
- if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();
+ if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();if(e.key.toLowerCase()==='l')$('lm').click();
  if(e.code==='ArrowRight')seek(T()+5);if(e.code==='ArrowLeft')seek(T()-5)});
 
 // wheel: drag to scrub, spins when playing
