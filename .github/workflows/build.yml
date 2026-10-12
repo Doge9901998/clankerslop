@@ -52,10 +52,29 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <application#' "$M"
           grep -q RECORD_AUDIO "$M" || { echo "::error::could not add the microphone permission to $M"; cat "$M"; exit 1; }
 
-      # Cosmetic only: if icon generation fails the build keeps the default icon instead of failing.
+      # Uses assets/icon-only.png, icon-foreground.png and icon-background.png.
+      # Cosmetic only, so a failure here is a warning, but the next step makes sure it can't leave a broken res tree.
       - name: Generate launcher icons
         continue-on-error: true
         run: npx --yes @capacitor/assets@3.0.5 generate --android --iconBackgroundColor '#161616' --iconBackgroundColorDark '#161616'
+
+      # Gradle's resource linking fails if an adaptive icon references an image that wasn't generated
+      # (e.g. "resource mipmap/ic_launcher_background not found"). If any reference is dangling, drop the
+      # adaptive icon XMLs so the regular ic_launcher.png icons are used instead.
+      - name: Verify launcher icon resources
+        run: |
+          R=android/app/src/main/res
+          for x in "$R"/mipmap-anydpi-v26/ic_launcher.xml "$R"/mipmap-anydpi-v26/ic_launcher_round.xml; do
+            [ -f "$x" ] || continue
+            for ref in $(grep -oE '@(mipmap|drawable)/[A-Za-z0-9_]+' "$x" | sort -u); do
+              kind=${ref#@}; kind=${kind%%/*}; name=${ref##*/}
+              if ! compgen -G "$R/$kind-*/$name.*" >/dev/null && ! compgen -G "$R/$kind/$name.*" >/dev/null; then
+                echo "::warning::$x references missing $ref - removing the adaptive icon, the standard icon will be used"
+                rm -f "$x"; break
+              fi
+            done
+          done
+          ls -R "$R" | grep -i launcher || true
 
       - run: npx cap sync android
 
