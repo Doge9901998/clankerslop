@@ -28,10 +28,11 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 .side{left:100%;width:1.6%;border:0;padding:0;background:linear-gradient(90deg,var(--s1),var(--s2));border-radius:0 .8cqw .8cqw 0;cursor:pointer;box-shadow:0 0 0 1px var(--sring)}
 .side:active{transform:translateX(-.4cqw)}
 .s1{top:14%;height:13.2%}.s2{top:31.2%;height:5.6%}.s3{top:43.8%;height:5.4%}
-#lt{left:-8.7%;top:13.8%;width:4.2%;height:53%;border-radius:2.2cqw;background:linear-gradient(90deg,var(--l1),var(--l2) 45%,var(--l1));box-shadow:0 0 0 .3cqw var(--lring),0 0 0 .55cqw var(--lring2)}
-#lev{position:absolute;left:0;width:100%;height:11%;top:50%;transform:translateY(-50%);cursor:grab;touch-action:none}
-#lev::before{content:"";position:absolute;left:100%;top:12%;width:95%;height:76%;background:linear-gradient(var(--h1),var(--h2));border-radius:0 1.2cqw 1.2cqw 0;box-shadow:0 0 0 .3cqw var(--lring2)}
-#lev::after{content:"";position:absolute;left:50%;top:50%;width:70%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--screw1),var(--screw2) 65%)}
+#lt{left:-8.7%;top:13.8%;width:4.6%;height:53%;border-radius:2.4cqw;background:linear-gradient(90deg,var(--l1),var(--l2) 45%,var(--l1));box-shadow:inset 0 0 1.4cqw #000a,0 0 0 .3cqw var(--lring),0 0 0 .55cqw var(--lring2)}
+#lev{position:absolute;left:10%;width:80%;top:14%;height:72%;border-radius:1.8cqw;background:linear-gradient(90deg,var(--h1),var(--h2));box-shadow:0 0 0 .3cqw var(--lring2),.5cqw .7cqw 1.4cqw #000a;transform-origin:50% 50%;cursor:grab;touch-action:none}
+#lev:active{cursor:grabbing}
+#lev::before{content:"";position:absolute;left:96%;top:43%;width:125%;height:14%;background:linear-gradient(var(--h1),var(--h2));border-radius:0 1.2cqw 1.2cqw 0;box-shadow:0 0 0 .3cqw var(--lring2)}
+#lev::after{content:"";position:absolute;left:50%;top:50%;width:80%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--screw1),var(--screw2) 65%);box-shadow:0 0 0 .25cqw var(--lring2)}
 .lab{left:1.8%;color:var(--lab);font-size:2.6cqw;line-height:.85;text-align:center;font-style:normal}
 #wheel{left:4.1%;top:8.3%;width:92.8%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--p1),var(--p2) 70%);box-shadow:0 0 0 .25cqw var(--pr1),0 0 0 .7cqw var(--pr2),inset 0 .2cqw .8cqw var(--pin);touch-action:none;cursor:grab;user-select:none}
 #rot{position:absolute;inset:0;border-radius:50%}
@@ -208,10 +209,11 @@ kb.onpointermove=e=>{if(kx==null)return;setVol(vol+(e.clientX-kx)/200);kx=e.clie
 kb.onpointerup=kb.onpointercancel=()=>{kx=null};
 kb.addEventListener('wheel',e=>{e.preventDefault();setVol(vol-e.deltaY/1500)},{passive:false});
 // transport lever: push up = fast forward, down = rewind (audible, incl. reverse), springs back
-const lev=$('lev'),lt=$('lt');let lp=0,lacc=0,lt0=performance.now(),ld=false;
-lev.onpointerdown=e=>{ld=true;lev.setPointerCapture(e.pointerId);lev.style.transition='none'};
-lev.onpointermove=e=>{if(!ld)return;const r=lt.getBoundingClientRect();lp=Math.max(-1,Math.min(1,(.5-(e.clientY-r.top)/r.height)*2.6));lev.style.top=(50-lp*38)+'%'};
-lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='top .2s';lev.style.top='50%'};
+const lev=$('lev'),lt=$('lt');let lp=0,lacc=0,lt0=performance.now(),ld=false,ly=0;
+// lever rocks about its centre pivot: drag the grip down (rewind pose) or up (fast-forward pose); tilt the bar so its top end swings toward ▲▲ = fast forward, bottom end toward R = rewind; springs back to centre on release
+lev.onpointerdown=e=>{ld=true;ly=e.clientY;lev.setPointerCapture(e.pointerId);lev.style.transition='none'};
+lev.onpointermove=e=>{if(!ld)return;const r=lt.getBoundingClientRect();lp=Math.max(-1,Math.min(1,(e.clientY-ly)/(r.height*.28)));lev.style.transform='rotate('+(-lp*7)+'deg)'};
+lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='transform .28s cubic-bezier(.3,1.7,.5,1)';lev.style.transform='rotate(0deg)'};
 $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpeed();msg(tape?'Tape mode: pitch follows speed; scrub the wheel to hear it forwards and backwards.':'')};
 
 // ---------- loading ----------
@@ -305,9 +307,9 @@ W.onwheel=e=>{e.preventDefault();if(wm==='seek')seek(T()+e.deltaY/40);else{acc=s
  if(mode==='b'&&E.buf){
   let r=null;
   if(scrub&&tape){r=vs/30;if(Math.abs(r)<.03)r=0}
-  else if(Math.abs(lp)>.06)r=lp>0?speed*Math.pow(2,lp*4):-Math.pow(2,-lp*4);
+  else if(Math.abs(lp)>.06)r=lp<0?speed*Math.pow(2,-lp*4):-Math.pow(2,lp*4); // bar tilted toward R (lp>0) = rewind, toward ▲▲ (lp<0) = fast-forward
   setOv(r)}
- else if(mode==='e'&&lp){const dt=Math.min(.1,(n-lt0)/1000);lacc+=lp*dt*8;if(Math.abs(lacc)>.05){seek(T()+lacc);lacc=0}}
+ else if(mode==='e'&&lp){const dt=Math.min(.1,(n-lt0)/1000);lacc-=lp*dt*8;if(Math.abs(lacc)>.05){seek(T()+lacc);lacc=0}}
  lt0=n;requestAnimationFrame(tk)})(lt0);
 
 // loop: OLED, platter, level meters, LED
