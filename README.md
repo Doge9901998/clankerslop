@@ -1,3 +1,5 @@
+[![build-apps](https://github.com/Doge9901998/clankerslop/actions/workflows/build.yml/badge.svg)](https://github.com/Doge9901998/clankerslop/actions/workflows/build.yml)
+
 # TP-7 player
 
 Static TP-7-style audio player + a Cloudflare Worker audio proxy.
