@@ -62,7 +62,7 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 .panel input[type=text]{flex:1;min-width:0;height:36px;border:0;border-radius:9px;padding:0 12px;font-size:13px;background:var(--pi);color:var(--pif);box-shadow:0 1px 3px #0003 inset}
 #msg{font-size:11px;min-height:14px;margin-top:8px;opacity:.7}
 #list{list-style:none;margin:12px 0 0;padding:0;font-size:12px;max-height:200px;overflow:auto}
-#list li{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer}#list li.cur{background:var(--pcur)}
+#list li{content-visibility:auto;contain-intrinsic-size:auto 34px;display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer}#list li.cur{background:var(--pcur)}
 #list li b{font-family:ui-monospace,monospace;width:22px;color:#e8440e}#list li span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#list li u{text-decoration:none;opacity:.5;padding:0 4px}
 </style><script>try{const t=JSON.parse(localStorage.getItem('tp7.theme')||'{}'),d=document.documentElement.dataset;d.ed=t.ed||'bk';d.pg=t.pg||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.ed='bk';document.documentElement.dataset.pg='light'}</script></head><body>
 <div class="stage"><div class="dev">
@@ -107,7 +107,10 @@ const idb=new Promise(r=>{try{const q=indexedDB.open('tp7',1);q.onupgradeneeded=
 const idbPut=(k,b)=>idb.then(d=>d&&new Promise(r=>{const t=d.transaction('f','readwrite');t.objectStore('f').put(b,k);t.oncomplete=()=>r(1);t.onerror=()=>r(0)}));
 const idbGet=k=>idb.then(d=>d&&new Promise(r=>{const q=d.transaction('f').objectStore('f').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()}));
 const idbDel=k=>idb.then(d=>d&&d.transaction('f','readwrite').objectStore('f').delete(k));
-const keep=(b,title)=>{const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);idbPut(id,b);return{title,src:URL.createObjectURL(b),blob:1,id}};
+let idc=0;
+const mkTrack=(b,title)=>({title,file:b,blob:1,id:Date.now().toString(36)+(idc++).toString(36)+Math.random().toString(36).slice(2,6)});
+const keep=(b,title)=>{const t=mkTrack(b,title);idbPut(t.id,b);return t};
+const idbPutAll=pairs=>idb.then(d=>d&&new Promise(r=>{const t=d.transaction('f','readwrite'),o=t.objectStore('f');pairs.forEach(([k,b])=>o.put(b,k));t.oncomplete=()=>r(1);t.onerror=()=>r(0)}));
 tracks=tracks.filter(t=>!t.yt&&(!t.blob||t.id)); // YouTube entries from older versions are dropped
 tracks.forEach(t=>{if(t.blob)t.ready=idbGet(t.id).then(b=>{if(b)t.src=URL.createObjectURL(b);else t.dead=1})});
 Promise.all(tracks.map(t=>t.ready)).then(()=>{tracks=tracks.filter(t=>!t.dead);if(cur>=tracks.length)cur=tracks.length?0:-1;save();render()});
@@ -229,9 +232,10 @@ function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.ov=null;E.pos=0;i
 let LG=0;const MAXDEC=120e6; // files bigger than this stream through <audio> instead of being decoded to memory
 async function load(i,autoplay=true){
  if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];bag.add(t);
+ if(t.file&&!t.src)t.src=URL.createObjectURL(t.file); // created on first play, not at import
  if(t.blob&&!t.src){t.ready&&t.ready.then(()=>load(i,autoplay));return}
  const g=++LG;stopAll();
- $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';render();
+ $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';mark();
  try{ensureCtx();if(ctx.state==='suspended')ctx.resume()}catch(e){return msg('Web Audio is not available in this browser.')}
  msg('Loading…');
  let ab=null;
@@ -295,18 +299,25 @@ function step(d){if(!tracks.length)return;
  else if(d>0){cur=-1;$('st').textContent='STOP'}}
 setLm(lm);
 
-function add(t,play){tracks.push(t);save();render();if(play||cur<0)load(tracks.length-1)}
+function add(t,play){addMany([t],play)}
+function addMany(list,play){if(!list.length)return;const first=tracks.length;tracks.push(...list);save();render();if(play||cur<0)load(first)}
 function addUrl(u){u=u.trim();if(!u)return;
  if(/(^|\/\/|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)/i.test(u))return msg('YouTube links aren’t supported. Use a direct audio link or add files.');
  try{const n=decodeURIComponent(new URL(u).pathname.split('/').pop())||u;add({title:n,src:u},true)}catch(e){msg('That does not look like a valid URL.')}}
 $('add').onclick=()=>{addUrl($('url').value);$('url').value=''};
 $('url').onkeydown=e=>{if(e.key==='Enter')$('add').click()};
-$('files').onchange=e=>{[...e.target.files].forEach((f,i)=>add(keep(f,f.name),i===0));e.target.value=''};
+$('files').onchange=e=>{const fs=[...e.target.files];e.target.value='';if(!fs.length)return;
+ const ts=fs.map(f=>mkTrack(f,f.name));idbPutAll(ts.map((t,i)=>[t.id,fs[i]])); // one DB transaction, one save, one list render for the whole batch
+ addMany(ts,true)};
 
-function render(){$('list').innerHTML='';tracks.forEach((t,i)=>{const li=document.createElement('li');if(i===cur)li.className='cur';
- li.innerHTML='<b>'+String(i+1).padStart(2,'0')+'</b><span></span><u title="Remove">✕</u>';li.children[1].textContent=t.title;
- li.onclick=()=>load(i);li.children[2].onclick=ev=>{ev.stopPropagation();if(tracks[i].id)idbDel(tracks[i].id);tracks.splice(i,1);if(i===cur){cur=-1;LG++;stopAll();$('ttl').textContent='NO TAPE'}else if(i<cur)cur--;save();render()};
- $('list').appendChild(li)})}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let lastCur=null;
+function render(){const L=$('list');
+ L.innerHTML=tracks.map((t,i)=>'<li data-i="'+i+'"'+(i===cur?' class="cur"':'')+'><b>'+String(i+1).padStart(2,'0')+'</b><span>'+esc(t.title)+'</span><u title="Remove">✕</u></li>').join('');
+ lastCur=L.children[cur]||null}
+function mark(){const L=$('list');if(lastCur)lastCur.classList.remove('cur');lastCur=L.children[cur]||null;if(lastCur)lastCur.classList.add('cur')}
+function removeAt(i){if(tracks[i].id)idbDel(tracks[i].id);tracks.splice(i,1);if(i===cur){cur=-1;LG++;stopAll();$('ttl').textContent='NO TAPE'}else if(i<cur)cur--;save();render()}
+$('list').onclick=e=>{const li=e.target.closest('li');if(!li)return;const i=+li.dataset.i;if(e.target.closest('u'))removeAt(i);else load(i)};
 
 // mic recording
 let mr=null,chunks=[];
