@@ -13,7 +13,7 @@ html[data-ed=al] .dev{--b1:#d7d8d9;--b2:#bebfc1;--hl:#fff;--ring:#9b9c9e;--sh:#0
 html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 .dev{position:relative;width:100%;aspect-ratio:542/783;border-radius:2.6cqw;background:linear-gradient(170deg,var(--b1),var(--b2));box-shadow:0 0 0 1px var(--ring),0 1px 0 var(--hl) inset,0 3cqw 7cqw var(--sh)}
 .dev>*{position:absolute;margin:0}
-.dev::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--nz);mix-blend-mode:screen;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.dev::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--nz);background:var(--noise) 0 0/140px 140px}
 .ant{left:11.8%;top:-7%;width:3%;height:8%;background:linear-gradient(90deg,var(--a1),var(--a2));border-radius:.6cqw .6cqw 0 0}
 .logo{left:5.5%;top:4%;font-size:7.4cqw;font-weight:300;color:var(--logo)}
 .mic{top:5.6%;width:1.5cqw;height:1.5cqw;border-radius:50%;background:var(--micbg);box-shadow:0 0 0 .3cqw var(--micr)}
@@ -29,13 +29,13 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 .side:active{transform:translateX(-.4cqw)}
 .s1{top:14%;height:13.2%}.s2{top:31.2%;height:5.6%}.s3{top:43.8%;height:5.4%}
 #lt{left:-8.7%;top:13.8%;width:4.6%;height:53%;border-radius:2.4cqw;background:linear-gradient(90deg,var(--l1),var(--l2) 45%,var(--l1));box-shadow:inset 0 0 1.4cqw #000a,0 0 0 .3cqw var(--lring),0 0 0 .55cqw var(--lring2)}
-#lev{position:absolute;left:10%;width:80%;top:14%;height:72%;border-radius:1.8cqw;background:linear-gradient(90deg,var(--h1),var(--h2));box-shadow:0 0 0 .3cqw var(--lring2),.5cqw .7cqw 1.4cqw #000a;transform-origin:50% 50%;cursor:grab;touch-action:none}
+#lev{position:absolute;left:10%;width:80%;top:14%;height:72%;border-radius:1.8cqw;background:linear-gradient(90deg,var(--h1),var(--h2));box-shadow:0 0 0 .3cqw var(--lring2),.5cqw .7cqw 1.4cqw #000a;transform-origin:50% 50%;cursor:grab;touch-action:none;will-change:transform}
 #lev:active{cursor:grabbing}
 #lev::before{content:"";position:absolute;left:96%;top:43%;width:125%;height:14%;background:linear-gradient(var(--h1),var(--h2));border-radius:0 1.2cqw 1.2cqw 0;box-shadow:0 0 0 .3cqw var(--lring2)}
 #lev::after{content:"";position:absolute;left:50%;top:50%;width:80%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--screw1),var(--screw2) 65%);box-shadow:0 0 0 .25cqw var(--lring2)}
 .lab{left:1.8%;color:var(--lab);font-size:2.6cqw;line-height:.85;text-align:center;font-style:normal}
 #wheel{left:4.1%;top:8.3%;width:92.8%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--p1),var(--p2) 70%);box-shadow:0 0 0 .25cqw var(--pr1),0 0 0 .7cqw var(--pr2),inset 0 .2cqw .8cqw var(--pin);touch-action:none;cursor:grab;user-select:none}
-#rot{position:absolute;inset:0;border-radius:50%}
+#rot{position:absolute;inset:0;border-radius:50%;will-change:transform;backface-visibility:hidden}
 .dg{position:absolute;left:2.2%;top:50%;width:95.6%;height:1px;background:linear-gradient(90deg,var(--dg) 0 34.6%,transparent 34.6% 65.4%,var(--dg) 65.4%);transform:rotate(-45deg)}
 .t1,.t2{position:absolute;color:var(--pt);font-size:3.1cqw;white-space:nowrap;transform:translate(-50%,-50%) rotate(45deg)}
 .t1{left:27.7%;top:27.9%}.t2{left:70.7%;top:70.5%}
@@ -91,6 +91,9 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 <div id="msg"></div><ol id="list"></ol></div>
 <script>
 const $=id=>document.getElementById(id);
+try{const c=document.createElement('canvas');c.width=c.height=140;const x=c.getContext('2d'),im=x.createImageData(140,140);
+ for(let i=0;i<im.data.length;i+=4){im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=Math.random()*14}
+ x.putImageData(im,0,0);document.documentElement.style.setProperty('--noise','url('+c.toDataURL()+')')}catch(e){}
 const H=document.documentElement;let ed=H.dataset.ed,pg=H.dataset.pg;const C={lit:'#e4e4e4',un:'#141414'};
 function applyTheme(){H.dataset.ed=ed;H.dataset.pg=pg;$('ed').textContent='EDITION: '+(ed==='al'?'ALUMINUM':'BLACK');$('pg').textContent='PAGE: '+pg.toUpperCase();
  const c=getComputedStyle(document.querySelector('.dev'));C.lit=c.getPropertyValue('--mlit').trim();C.un=c.getPropertyValue('--mun').trim();
@@ -125,7 +128,7 @@ function showPitch(){$('pitch').textContent=(pst>=0?'+':'')+(+pst.toFixed(2))+' 
 // Pitch shifter (AudioWorklet): two crossfading delay taps whose delay sweeps at (1-ratio), works for any ratio.
 const WK=`class S extends AudioWorkletProcessor{
 static get parameterDescriptors(){return[{name:'r',defaultValue:1,minValue:1e-9,maxValue:1e9,automationRate:'k-rate'}]}
-constructor(){super();this.N=16384;this.b=[new Float32Array(this.N),new Float32Array(this.N)];this.w=0;this.ph=0;this.W=Math.max(512,Math.round(sampleRate*.06))}
+constructor(){super();this.port.onmessage=()=>{this.b[0].fill(0);this.b[1].fill(0)};this.N=16384;this.b=[new Float32Array(this.N),new Float32Array(this.N)];this.w=0;this.ph=0;this.W=Math.max(512,Math.round(sampleRate*.06))}
 process(ins,outs,pr){const i=ins[0],o=outs[0];if(!o||!o[0])return true;const r=pr.r[0],N=this.N,M=N-1,W=this.W,b=this.b,n=o[0].length;
  const L=i&&i[0]||null,R=i&&i[1]||L,inc=(1-r)/W;let w=this.w,ph=this.ph;
  const rd=(a,p)=>{const f=Math.floor(p),x=p-f,k=f&M;return a[k]*(1-x)+a[(k+1)&M]*x};
@@ -138,10 +141,10 @@ process(ins,outs,pr){const i=ins[0],o=outs[0];if(!o||!o[0])return true;const r=p
 registerProcessor('tp7-shift',S)`;
 
 function ensureCtx(){if(ctx)return;
- ctx=new(window.AudioContext||window.webkitAudioContext)();an=ctx.createAnalyser();an.fftSize=256;gn=ctx.createGain();gn.gain.value=vol;
+ ctx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'playback'});an=ctx.createAnalyser();an.fftSize=256;gn=ctx.createGain();gn.gain.value=vol;
  dry=ctx.createGain();wet=ctx.createGain();wet.gain.value=0;dry.connect(an);wet.connect(an);an.connect(gn);gn.connect(ctx.destination);
  wkP=(ctx.audioWorklet?ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WK],{type:'text/javascript'}))).then(()=>{
-   wk=new AudioWorkletNode(ctx,'tp7-shift',{outputChannelCount:[2],channelCount:2,channelCountMode:'explicit'});wk.connect(wet)}):Promise.reject()
+   wk=new AudioWorkletNode(ctx,'tp7-shift',{outputChannelCount:[2],channelCount:2,channelCountMode:'explicit'})}):Promise.reject()
   ).catch(()=>{wk=null;msg('Pitch shifter not available here: pitch follows speed.')})}
 
 // ---------- buffer engine (audio files / links / recordings) ----------
@@ -150,9 +153,14 @@ const dur=()=>E.buf?E.buf.duration:0;
 function Tb(){if(!E.on||!ctx)return E.pos;return Math.min(Math.max(E.p0+E.d0*(ctx.currentTime-E.t0)*E.s0,0),dur())}
 function plan(){let s,d;if(E.ov!=null){s=Math.abs(E.ov);d=E.ov<0?-1:1}else{s=speed;d=rev?-1:1}
  s=clampS(s);const p=(tape?s:1)*pr();return{s,d,q:Math.min(1e6,Math.max(1e-6,p/s))}}
-function shift(q){if(!wk)return;const t=ctx.currentTime,on=Math.abs(Math.log2(q))>.002;
+// The worklet only gets pulled by the audio thread while it is connected to the output, so connect it just while a shift is needed.
+let wkOn=false,wkT=0;
+function wkSet(on){if(!wk)return;clearTimeout(wkT);
+ if(on){if(!wkOn){wkOn=true;try{wk.port.postMessage(0);wk.connect(wet)}catch(e){}}}
+ else if(wkOn)wkT=setTimeout(()=>{wkOn=false;try{wk.disconnect()}catch(e){}},120)} // after the dry/wet crossfade
+function shift(q){if(!wk)return;const t=ctx.currentTime,on=Math.abs(Math.log2(q))>.002;wkSet(on);
  wk.parameters.get('r').setValueAtTime(q,t);dry.gain.setTargetAtTime(on?0:1,t,.01);wet.gain.setTargetAtTime(on?1:0,t,.01)}
-function bypass(){if(!ctx)return;dry.gain.value=1;wet.gain.value=0}
+function bypass(){if(!ctx)return;dry.gain.value=1;wet.gain.value=0;wkSet(false)}
 function rbuf(){if(!E.rb){const b=E.buf,r=ctx.createBuffer(b.numberOfChannels,b.length,b.sampleRate);
  for(let c=0;c<b.numberOfChannels;c++){const d=r.getChannelData(c);d.set(b.getChannelData(c));d.reverse()}E.rb=r}return E.rb}
 function killSrc(){E.gen++;if(E.src){try{E.src.onended=null;E.src.stop()}catch(e){}try{E.src.disconnect()}catch(e){}E.src=null}}
@@ -253,7 +261,10 @@ function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode: this 
 const playing=()=>mode==='b'?E.on:!!(A&&!A.paused&&!A.ended);
 const T=()=>mode==='b'?Tb():(A?A.currentTime:0);
 const D=()=>mode==='b'?dur():(A&&isFinite(A.duration)?A.duration:0);
-function seek(t){t=Math.min(Math.max(0,t),D()||t);if(mode==='b'){E.pos=t;if(E.on)startSrc()}else if(A)A.currentTime=t}
+let rsq=0;
+function seek(t){t=Math.min(Math.max(0,t),D()||t);if(mode==='b'){E.pos=t;
+  if(E.on){E.p0=t;E.t0=ctx.currentTime; // clock follows the new position right away; the audio source restarts on the next frame
+   if(!rsq)rsq=requestAnimationFrame(()=>{rsq=0;if(E.on)startSrc()})}}else if(A)A.currentTime=t}
 function toggle(){if(cur<0){if(tracks.length)load(0);return}
  if(ctx&&ctx.state==='suspended')ctx.resume();
  if(mode==='b'){if(!E.buf){if(!A)load(cur);return}E.on?pause():play()}else if(A){A.paused?A.play():A.pause()}}
@@ -338,17 +349,22 @@ W.onwheel=e=>{e.preventDefault();if(wm==='seek')seek(T()+e.deltaY/40);else{acc=s
  lt0=n;requestAnimationFrame(tk)})(lt0);
 
 // loop: OLED, platter, level meters, LED
-const cv=$('mt'),g=cv.getContext('2d'),buf=new Uint8Array(128);let lvl=0;
+const cv=$('mt'),g=cv.getContext('2d'),buf=new Uint8Array(128);let lvl=0,mk='',rd=-1;
+const txt=(e,v)=>{const n=e.firstChild;if(!n||n.nodeValue!==v)e.textContent=v}; // read-compare first: skips needless DOM writes
+const eTm=$('tm'),eDur=$('dur'),eSt=$('st'),ePp=$('pp'),eRot=$('rot'),eDot=$('dot');
 (function loop(){
  const t=T(),d=D(),p=playing()||E.ov!=null&&E.ov!==0;
- $('tm').textContent=Math.floor(t/3600)+'.'+String(Math.floor(t/60)%60).padStart(2,'0')+'.'+String(Math.floor(t%60)).padStart(2,'0');
- if(d)$('dur').textContent=fmt(d);
- $('st').textContent=mr?'REC':p?(E.d0<0&&mode==='b'?'REV':'PLAY'):cur<0?'STOP':'PAUSE';$('pp').textContent=playing()?'❚❚':'▶';
- $('rot').style.transform='rotate('+((t*30+off)%360)+'deg)';
- $('dot').classList.toggle('pl',p);$('dot').classList.toggle('rec',!!mr);
+ txt(eTm,Math.floor(t/3600)+'.'+String(Math.floor(t/60)%60).padStart(2,'0')+'.'+String(Math.floor(t%60)).padStart(2,'0'));
+ if(d)txt(eDur,fmt(d));
+ txt(eSt,mr?'REC':p?(E.d0<0&&mode==='b'?'REV':'PLAY'):cur<0?'STOP':'PAUSE');txt(ePp,playing()?'❚❚':'▶');
+ const a=Math.round(((t*30+off)%360)*10)/10;if(a!==rd){rd=a;eRot.style.transform='rotate('+a+'deg)'}
+ eDot.classList.toggle('pl',p);eDot.classList.toggle('rec',!!mr);
  let v=0;if(p){if(an&&!fake){an.getByteTimeDomainData(buf);let m=0;for(const b of buf)m=Math.max(m,Math.abs(b-128));v=m/128}else v=.25+.35*Math.abs(Math.sin(t*7.3)*Math.sin(t*2.1))}
- lvl+=(v-lvl)*.3;g.clearRect(0,0,98,160);
- [[35.5,1],[67.5,.93]].forEach(([x,k])=>{for(let i=0;i<16;i++){const on=i/16<lvl*k*1.6;g.fillStyle=on?(i>12?'#ff4f12':C.lit):C.un;g.fillRect(x-2,150-i*10,4,8)}});
+ lvl+=(v-lvl)*.3;
+ // level meters: 16 segments per column; redraw only when the number of lit segments (or the theme colours) changed
+ const n1=Math.min(16,Math.ceil(lvl*1.6*16)),n2=Math.min(16,Math.ceil(lvl*.93*1.6*16)),k=n1+'|'+n2+'|'+C.lit+'|'+C.un;
+ if(k!==mk){mk=k;g.clearRect(0,0,98,160);
+  [[35.5,n1],[67.5,n2]].forEach(([x,n])=>{for(let i=0;i<16;i++){g.fillStyle=i<n?(i>12?'#ff4f12':C.lit):C.un;g.fillRect(x-2,150-i*10,4,8)}})}
  requestAnimationFrame(loop)})();
 $('ed').onclick=()=>{ed=ed==='al'?'bk':'al';applyTheme()};$('pg').onclick=()=>{pg=pg==='dark'?'light':'dark';applyTheme()};applyTheme();
 
