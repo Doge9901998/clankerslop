@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>TP-7 · field recorder</title><link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#161616"><link rel="icon" href="icon-192.png"><link rel="apple-touch-icon" href="icon-192.png"><style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{--pgbg:#cfcfcf;--pgfg:#1c1c1c;--pb:#1b1b1b;--pf:#eee;--pi:#ebebe8;--pif:#111;--pcur:#0002;color-scheme:light}
+html[data-ed=al]{--pgbg:#f0f0f1}
+html[data-pg=dark]{--pgbg:#121212;--pgfg:#ddd;--pb:#2d2d2d;--pi:#1e1e1e;--pif:#eee;--pcur:#fff2;color-scheme:dark}
+body{margin:0;background:var(--pgbg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--pgfg);padding:84px 0 60px;display:flex;flex-direction:column;align-items:center}
+.stage{container-type:inline-size;width:min(440px,calc(100vw - 84px));margin-bottom:84px}
+.dev{--b1:#1c1c1c;--b2:#121212;--hl:#3a3a3a;--ring:#000;--sh:#0007;--logo:#cdcdcd;--micbg:#050505;--micr:#2a2a2a;--bxbg:#e6e6e6;--bxfg:#111;--nbg:#e6e6e6;--nfg:#111;--nbd:#e6e6e6;--pbg:#e6e6e6;--pfg:#111;--pbd:#e6e6e6;--s1:#1c1c1c;--s2:#2c2c2c;--sring:#000;--l1:#151515;--l2:#222;--lring:#2d2d2d;--lring2:#000;--h1:#232323;--h2:#141414;--screw1:#4a4a4a;--screw2:#0c0c0c;--lab:#d6d6d6;--p1:#181818;--p2:#101010;--pr1:#333;--pr2:#080808;--pin:#000;--dg:#c9c9c9;--pt:#cfcfcf;--hub1:#0d0d0d;--hub2:#020202;--hubr:#1c1c1c;--hd1:#555;--hd2:#1a1a1a;--d1:#8a8a85;--d2:#4c4c49;--dr:#1a1a1a;--c1:#121212;--cr1:#2c2c2c;--cr2:#000;--v1:#222;--v2:#0d0d0d;--vr:#353535;--vfg:#ddd;--k1:#212121;--k2:#161616;--kh:#3a3a3a;--kr:#080808;--kfg:#f2f2f2;--rfg:#f2f2f2;--sl:#050505;--slr:#2a2a2a;--xh:#d0d0d0;--mlit:#e4e4e4;--mun:#141414;--kn1:#0a0a0a;--kn2:#2b2b2b;--knr:#000;--a1:#262626;--a2:#0e0e0e;--nz:.6}
+html[data-ed=al] .dev{--b1:#d7d8d9;--b2:#bebfc1;--hl:#fff;--ring:#9b9c9e;--sh:#0004;--logo:#4a4b4d;--micbg:#161616;--micr:#b8b9bb;--bxbg:#ff5a1f;--bxfg:#fff;--nbg:transparent;--nfg:#555;--nbd:#8d8e90;--pbg:transparent;--pfg:#333;--pbd:#555;--s1:#cfd0d1;--s2:#a7a8aa;--sring:#8c8d8f;--l1:#eeeeef;--l2:#bdbec0;--lring:#9a9b9d;--lring2:#e9e9ea;--h1:#e2e3e4;--h2:#b3b4b6;--screw1:#aaa;--screw2:#555;--lab:#555;--p1:#d9dadb;--p2:#c3c4c6;--pr1:#a4a5a7;--pr2:#e4e5e6;--pin:#0003;--dg:#2b2b2b;--pt:#3b3b3b;--hub1:#f2f2f3;--hub2:#8d8e90;--hubr:#7d7e80;--hd1:#999;--hd2:#444;--d1:#a5a6a8;--d2:#8b8c8e;--dr:#c4c5c7;--c1:#c7c8ca;--cr1:#8f9092;--cr2:#e6e7e8;--v1:#e4e5e6;--v2:#bcbdbf;--vr:#8d8e90;--vfg:#333;--k1:#d0d1d2;--k2:#bdbec0;--kh:#fff;--kr:#8d8e90;--kfg:#151515;--rfg:#ff5a1f;--sl:#a2a3a5;--slr:#ececed;--xh:#4a4a4a;--mlit:#2b2b2b;--mun:#9d9ea0;--kn1:#9a9b9d;--kn2:#cfd0d2;--knr:#7f8082;--a1:#e8e9ea;--a2:#a0a1a3;--nz:.2}
+html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
+.dev{position:relative;width:100%;aspect-ratio:542/783;border-radius:2.6cqw;background:linear-gradient(170deg,var(--b1),var(--b2));box-shadow:0 0 0 1px var(--ring),0 1px 0 var(--hl) inset,0 3cqw 7cqw var(--sh)}
+.dev>*{position:absolute;margin:0}
+.dev::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:var(--nz);mix-blend-mode:screen;background:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .08 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>")}
+.ant{left:11.8%;top:-7%;width:3%;height:8%;background:linear-gradient(90deg,var(--a1),var(--a2));border-radius:.6cqw .6cqw 0 0}
+.logo{left:5.5%;top:4%;font-size:7.4cqw;font-weight:300;color:var(--logo)}
+.mic{top:5.6%;width:1.5cqw;height:1.5cqw;border-radius:50%;background:var(--micbg);box-shadow:0 0 0 .3cqw var(--micr)}
+.oled{left:74.2%;top:2.6%;width:22.1%;height:8.4%;background:#000;border-radius:1.4cqw;box-shadow:0 0 0 .5cqw #202020,0 0 0 .8cqw #0a0a0a;color:#fff;padding:1cqw 1.6cqw;overflow:hidden}
+#ttl{font-weight:700;font-size:5.1cqw;line-height:1;white-space:nowrap;overflow:hidden;text-transform:uppercase}
+.o2{display:flex;justify-content:space-between;align-items:center;margin-top:.9cqw;font-family:ui-monospace,Menlo,monospace;font-size:3cqw}
+#trk{background:#fff;color:#000;border-radius:.8cqw;padding:.1cqw .8cqw;font-weight:700;font-size:2.8cqw}
+.bx{display:inline-block;background:var(--bxbg);color:var(--bxfg);border-radius:.5cqw;font-style:normal;font-size:2.8cqw;line-height:1;padding:.5cqw .8cqw;font-family:ui-monospace,monospace}
+.bx.n{background:var(--nbg);color:var(--nfg);box-shadow:0 0 0 1px var(--nbd) inset}
+.t2 .bx{background:var(--pbg);color:var(--pfg);box-shadow:0 0 0 1px var(--pbd) inset}
+.dev>.bx{left:94%}
+.side{left:100%;width:1.6%;border:0;padding:0;background:linear-gradient(90deg,var(--s1),var(--s2));border-radius:0 .8cqw .8cqw 0;cursor:pointer;box-shadow:0 0 0 1px var(--sring)}
+.side:active{transform:translateX(-.4cqw)}
+.s1{top:14%;height:13.2%}.s2{top:31.2%;height:5.6%}.s3{top:43.8%;height:5.4%}
+#lt{left:-8.7%;top:13.8%;width:4.2%;height:53%;border-radius:2.2cqw;background:linear-gradient(90deg,var(--l1),var(--l2) 45%,var(--l1));box-shadow:0 0 0 .3cqw var(--lring),0 0 0 .55cqw var(--lring2)}
+#lev{position:absolute;left:0;width:100%;height:11%;top:50%;transform:translateY(-50%);cursor:grab;touch-action:none}
+#lev::before{content:"";position:absolute;left:100%;top:12%;width:95%;height:76%;background:linear-gradient(var(--h1),var(--h2));border-radius:0 1.2cqw 1.2cqw 0;box-shadow:0 0 0 .3cqw var(--lring2)}
+#lev::after{content:"";position:absolute;left:50%;top:50%;width:70%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--screw1),var(--screw2) 65%)}
+.lab{left:1.8%;color:var(--lab);font-size:2.6cqw;line-height:.85;text-align:center;font-style:normal}
+#wheel{left:4.1%;top:8.3%;width:92.8%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 35%,var(--p1),var(--p2) 70%);box-shadow:0 0 0 .25cqw var(--pr1),0 0 0 .7cqw var(--pr2),inset 0 .2cqw .8cqw var(--pin);touch-action:none;cursor:grab;user-select:none}
+#rot{position:absolute;inset:0;border-radius:50%}
+.dg{position:absolute;left:2.2%;top:50%;width:95.6%;height:1px;background:linear-gradient(90deg,var(--dg) 0 34.6%,transparent 34.6% 65.4%,var(--dg) 65.4%);transform:rotate(-45deg)}
+.t1,.t2{position:absolute;color:var(--pt);font-size:3.1cqw;white-space:nowrap;transform:translate(-50%,-50%) rotate(45deg)}
+.t1{left:27.7%;top:27.9%}.t2{left:70.7%;top:70.5%}
+#hub{position:absolute;left:36.9%;top:36.9%;width:26.2%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 30%,var(--hub1),var(--hub2));box-shadow:0 0 0 .2cqw var(--hubr),inset 0 .3cqw .8cqw var(--pin);cursor:pointer}
+#hub i{position:absolute;width:3.8%;aspect-ratio:1;border-radius:50%;background:radial-gradient(var(--hd1),var(--hd2))}
+#dot{left:7.9%;top:66.2%;width:7.7%;aspect-ratio:1;border-radius:50%;border:0;padding:0;cursor:pointer;background:radial-gradient(circle at 40% 35%,var(--d1),var(--d2));box-shadow:0 0 0 .3cqw var(--dr)}
+#dot.pl{box-shadow:0 0 2.4cqw #fff7,0 0 0 .3cqw var(--dr)}#dot.rec{background:radial-gradient(#ff9a70,#ff4f12);box-shadow:0 0 3cqw #ff4f12}#dot.sp{filter:brightness(1.4)}
+.cap{left:87.5%;top:67.1%;width:23%;height:9.5cqw;transform:translate(-50%,-50%) rotate(-45deg);border-radius:5cqw;background:var(--c1);box-shadow:0 0 0 .3cqw var(--cr1),0 0 0 .55cqw var(--cr2)}
+#vp,#vm{width:7.7%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:0;padding:0;background:radial-gradient(var(--v1),var(--v2));box-shadow:0 0 0 .3cqw var(--vr);color:var(--vfg);font-size:4.4cqw;cursor:pointer;display:grid;place-items:center}
+#vp{left:92.1%;top:63.9%}#vm{left:83%;top:70.2%}
+.key{top:75.9%;height:24.1%;border:0;color:var(--kfg);font-size:3.6cqw;background:linear-gradient(var(--k1),var(--k2));box-shadow:0 .2cqw 0 var(--kh) inset,0 0 0 .3cqw var(--kr);cursor:pointer;display:flex;justify-content:center;padding-top:6cqw;border-radius:.6cqw .6cqw 0 0;z-index:1}
+.key:active{transform:translateY(.4cqw)}
+#rec{left:0;width:23.8%;border-bottom-left-radius:2.6cqw;color:var(--rfg)}#pp{left:24.9%;width:24%}#stop{left:50%;width:24.2%}
+#rec.on{color:#ff4f12;animation:bl 1s infinite}@keyframes bl{50%{opacity:.5}}
+.slit{top:76.1%;height:20.4%;width:1.3%;background:var(--sl);border-radius:1cqw;box-shadow:0 0 0 .2cqw var(--slr)}
+#mt{left:79%;top:76.1%;width:18%;height:20.4%;pointer-events:none}
+.xh{left:79.2%;top:81.2%;width:17%;height:1px;background:var(--xh);opacity:.85;pointer-events:none}
+#knob{left:76.8%;top:99%;width:19.9%;height:12.3%;border-radius:0 0 1cqw 1cqw;background:linear-gradient(90deg,var(--kn1) 50%,var(--kn2) 50%);background-size:.9cqw 100%;box-shadow:0 0 0 .3cqw var(--knr);cursor:ew-resize;touch-action:none}
+.panel{width:min(440px,calc(100vw - 32px));font-size:13px}
+.panel button,.file{height:36px;border:0;border-radius:9px;background:var(--pb);color:#eee;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.stat{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em}
+.row{display:flex;gap:8px;margin-bottom:8px}.row button{flex:1}
+#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on{background:#ff4f12}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
+.panel input[type=text]{flex:1;min-width:0;height:36px;border:0;border-radius:9px;padding:0 12px;font-size:13px;background:var(--pi);color:var(--pif);box-shadow:0 1px 3px #0003 inset}
+#msg{font-size:11px;min-height:14px;margin-top:8px;opacity:.7}
+#list{list-style:none;margin:12px 0 0;padding:0;font-size:12px;max-height:200px;overflow:auto}
+#list li{display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer}#list li.cur{background:var(--pcur)}
+#list li b{font-family:ui-monospace,monospace;width:22px;color:#e8440e}#list li span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#list li u{text-decoration:none;opacity:.5;padding:0 4px}
+</style><script>try{const t=JSON.parse(localStorage.getItem('tp7.theme')||'{}'),d=document.documentElement.dataset;d.ed=t.ed||'bk';d.pg=t.pg||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.ed='bk';document.documentElement.dataset.pg='light'}</script></head><body>
+<div class="stage"><div class="dev">
+<i class="ant"></i><b class="logo">TP-7</b><i class="mic" style="left:33.8%"></i><i class="mic" style="left:50%"></i>
+<div class="oled"><div id="ttl">NO TAPE</div><div class="o2"><span id="tm">0.00.00</span><span id="trk">--</span></div></div>
+<button class="side s1" id="mbtn" title="Wheel mode (M)"></button><button class="side s2" id="prev" title="Previous"></button><button class="side s3" id="next" title="Next"></button>
+<i class="bx" style="top:19.3%">M</i><i class="bx n" style="top:33.2%">‹</i><i class="bx n" style="top:45.4%">›</i>
+<div id="lt"><div id="lev"></div></div>
+<i class="lab" style="top:18%">▲<br>▲</i><i class="lab" style="top:58%">R<br>▼</i>
+<div id="wheel"><div id="rot"><i class="dg"></i><span class="t1">96 / 24</span><span class="t2">3 ⌀ <i class="bx">M</i></span>
+<div id="hub"><i style="left:39.8%;top:16.3%"></i><i style="left:81.4%;top:57.1%"></i><i style="left:26.1%;top:72.1%"></i></div></div></div>
+<button id="dot" title="Wheel mode"></button>
+<div class="cap"></div><button id="vp" title="Volume up">+</button><button id="vm" title="Volume down">−</button>
+<button class="key" id="rec" title="Record from mic">●</button><button class="key" id="pp" title="Play / pause">▶</button><button class="key" id="stop" title="Stop">■</button>
+<i class="slit" style="left:84.9%"></i><i class="slit" style="left:90.8%"></i><canvas id="mt" width="98" height="160"></canvas><i class="xh"></i>
+<div id="knob" title="Volume"></div>
+</div></div>
+<div class="panel">
+<div class="row"><button id="ed">EDITION: BLACK</button><button id="pg">PAGE: LIGHT</button></div>
+<div class="stat"><span id="st">STOP</span><span id="dur">--:--</span><button id="wm" style="height:28px">◎ SEEK</button></div>
+<div class="row"><button id="slow">◀ SLOW</button><button id="rate">1.00×</button><button id="fast">FAST ▶</button><button id="tape" title="Pitch follows speed">TAPE</button></div>
+<div class="row"><button id="pdn" title="Pitch down one semitone (,)">▼ PITCH</button><button id="pitch" title="Click to reset">+0 st</button><button id="pup" title="Pitch up one semitone (.)">PITCH ▲</button><button id="rev" title="Play backwards (R)">◀ REV</button></div>
+<div class="row"><input id="url" type="text" placeholder="Audio URL (mp3, wav, CDN…)" autocomplete="off"><button id="add" style="flex:0 0 auto">LOAD</button></div>
+<div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label></div>
+<div class="row" id="inst" style="margin:8px 0 0"><button id="pwa" title="Install as an offline app">⬇ INSTALL</button><a class="file" id="dlw" hidden>WINDOWS</a><a class="file" id="dla" hidden>ANDROID</a></div>
+<div id="msg"></div><ol id="list"></ol></div>
+<script>
+const $=id=>document.getElementById(id);
+const H=document.documentElement;let ed=H.dataset.ed,pg=H.dataset.pg;const C={lit:'#e4e4e4',un:'#141414'};
+function applyTheme(){H.dataset.ed=ed;H.dataset.pg=pg;$('ed').textContent='EDITION: '+(ed==='al'?'ALUMINUM':'BLACK');$('pg').textContent='PAGE: '+pg.toUpperCase();
+ const c=getComputedStyle(document.querySelector('.dev'));C.lit=c.getPropertyValue('--mlit').trim();C.un=c.getPropertyValue('--mun').trim();
+ try{localStorage.setItem('tp7.theme',JSON.stringify({ed,pg}))}catch(_){}}
+let tracks=[],cur=-1,mode='b',A=null,ctx=null,an=null,gn=null,dry=null,wet=null,wk=null,wkP=null,fake=false;
+const KEY='tp7.tracks';
+try{tracks=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(tracks.filter(t=>!t.blob||t.id).map(t=>t.blob?{title:t.title,id:t.id,blob:1}:t)))}catch(e){}};
+// local files & recordings are kept in IndexedDB so they survive restarts (offline library)
+const idb=new Promise(r=>{try{const q=indexedDB.open('tp7',1);q.onupgradeneeded=()=>q.result.createObjectStore('f');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
+const idbPut=(k,b)=>idb.then(d=>d&&new Promise(r=>{const t=d.transaction('f','readwrite');t.objectStore('f').put(b,k);t.oncomplete=()=>r(1);t.onerror=()=>r(0)}));
+const idbGet=k=>idb.then(d=>d&&new Promise(r=>{const q=d.transaction('f').objectStore('f').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()}));
+const idbDel=k=>idb.then(d=>d&&d.transaction('f','readwrite').objectStore('f').delete(k));
+const keep=(b,title)=>{const id=Date.now().toString(36)+Math.random().toString(36).slice(2,6);idbPut(id,b);return{title,src:URL.createObjectURL(b),blob:1,id}};
+tracks=tracks.filter(t=>!t.yt&&(!t.blob||t.id)); // YouTube entries from older versions are dropped
+tracks.forEach(t=>{if(t.blob)t.ready=idbGet(t.id).then(b=>{if(b)t.src=URL.createObjectURL(b);else t.dead=1})});
+Promise.all(tracks.map(t=>t.ready)).then(()=>{tracks=tracks.filter(t=>!t.dead);if(cur>=tracks.length)cur=tracks.length?0:-1;save();render()});
+try{navigator.storage.persist()}catch(e){}
+const msg=t=>$('msg').textContent=t||'';
+const fmt=s=>{s=Math.max(0,s||0);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')};
+
+// ---------- speed / pitch / reverse state ----------
+// Speed has no musical ceiling any more: it is only kept inside 0.001x..10000x so it can never hit 0 or Infinity.
+// Pitch is in semitones, independent of speed (TAPE mode makes pitch follow speed on top of it).
+const SMIN=.001,SMAX=1e4,PMAX=240,ASMIN=.0625,ASMAX=16; // AS* = limits of the plain <audio> fallback
+let speed=1,pst=0,tape=false,rev=false,vol=.8,fl;
+const pr=()=>Math.pow(2,pst/12);
+const clampS=v=>Math.min(SMAX,Math.max(SMIN,v));
+function showRate(r){$('rate').textContent=(r>=100?Math.round(r):+r.toPrecision(4))+'×'}
+function showPitch(){$('pitch').textContent=(pst>=0?'+':'')+(+pst.toFixed(2))+' st'}
+
+// Pitch shifter (AudioWorklet): two crossfading delay taps whose delay sweeps at (1-ratio), works for any ratio.
+const WK=`class S extends AudioWorkletProcessor{
+static get parameterDescriptors(){return[{name:'r',defaultValue:1,minValue:1e-9,maxValue:1e9,automationRate:'k-rate'}]}
+constructor(){super();this.N=16384;this.b=[new Float32Array(this.N),new Float32Array(this.N)];this.w=0;this.ph=0;this.W=Math.max(512,Math.round(sampleRate*.06))}
+process(ins,outs,pr){const i=ins[0],o=outs[0];if(!o||!o[0])return true;const r=pr.r[0],N=this.N,M=N-1,W=this.W,b=this.b,n=o[0].length;
+ const L=i&&i[0]||null,R=i&&i[1]||L,inc=(1-r)/W;let w=this.w,ph=this.ph;
+ const rd=(a,p)=>{const f=Math.floor(p),x=p-f,k=f&M;return a[k]*(1-x)+a[(k+1)&M]*x};
+ for(let k=0;k<n;k++){b[0][w]=L?L[k]:0;b[1][w]=R?R[k]:0;
+  const g2=.5+.5*Math.cos(6.283185307*ph),g1=1-g2;let q=ph+.5;if(q>=1)q-=1;
+  const d1=ph*W+1,d2=q*W+1;
+  for(let c=0;c<o.length&&c<2;c++)o[c][k]=g1*rd(b[c],w-d1)+g2*rd(b[c],w-d2);
+  ph+=inc;ph-=Math.floor(ph);w=(w+1)&M}
+ this.w=w;this.ph=ph;return true}}
+registerProcessor('tp7-shift',S)`;
+
+function ensureCtx(){if(ctx)return;
+ ctx=new(window.AudioContext||window.webkitAudioContext)();an=ctx.createAnalyser();an.fftSize=256;gn=ctx.createGain();gn.gain.value=vol;
+ dry=ctx.createGain();wet=ctx.createGain();wet.gain.value=0;dry.connect(an);wet.connect(an);an.connect(gn);gn.connect(ctx.destination);
+ wkP=(ctx.audioWorklet?ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WK],{type:'text/javascript'}))).then(()=>{
+   wk=new AudioWorkletNode(ctx,'tp7-shift',{outputChannelCount:[2],channelCount:2,channelCountMode:'explicit'});wk.connect(wet)}):Promise.reject()
+  ).catch(()=>{wk=null;msg('Pitch shifter not available here: pitch follows speed.')})}
+
+// ---------- buffer engine (audio files / links / recordings) ----------
+const E={buf:null,rb:null,src:null,on:false,pos:0,t0:0,p0:0,s0:1,d0:1,ov:null,ovWas:false,gen:0};
+const dur=()=>E.buf?E.buf.duration:0;
+function Tb(){if(!E.on||!ctx)return E.pos;return Math.min(Math.max(E.p0+E.d0*(ctx.currentTime-E.t0)*E.s0,0),dur())}
+function plan(){let s,d;if(E.ov!=null){s=Math.abs(E.ov);d=E.ov<0?-1:1}else{s=speed;d=rev?-1:1}
+ s=clampS(s);const p=(tape?s:1)*pr();return{s,d,q:Math.min(1e6,Math.max(1e-6,p/s))}}
+function shift(q){if(!wk)return;const t=ctx.currentTime,on=Math.abs(Math.log2(q))>.002;
+ wk.parameters.get('r').setValueAtTime(q,t);dry.gain.setTargetAtTime(on?0:1,t,.01);wet.gain.setTargetAtTime(on?1:0,t,.01)}
+function bypass(){if(!ctx)return;dry.gain.value=1;wet.gain.value=0}
+function rbuf(){if(!E.rb){const b=E.buf,r=ctx.createBuffer(b.numberOfChannels,b.length,b.sampleRate);
+ for(let c=0;c<b.numberOfChannels;c++){const d=r.getChannelData(c);d.set(b.getChannelData(c));d.reverse()}E.rb=r}return E.rb}
+function killSrc(){E.gen++;if(E.src){try{E.src.onended=null;E.src.stop()}catch(e){}try{E.src.disconnect()}catch(e){}E.src=null}}
+function startSrc(){killSrc();if(!E.buf||!ctx)return;const{s,d,q}=plan(),D=dur();
+ const off=Math.min(Math.max(d>0?E.pos:D-E.pos,0),Math.max(0,D-.001));
+ const n=ctx.createBufferSource();n.buffer=d>0?E.buf:rbuf();n.playbackRate.value=s;n.connect(dry);if(wk)n.connect(wk);
+ const g=++E.gen;n.onended=()=>{if(g===E.gen)ended()};
+ E.src=n;E.t0=ctx.currentTime;E.p0=E.pos;E.s0=s;E.d0=d;shift(q);n.start(0,off)}
+function replan(){if(!E.on||!E.src)return;const{s,d,q}=plan();E.pos=Tb();
+ if(d!==E.d0){startSrc();return}
+ const t=ctx.currentTime;E.p0=E.pos;E.t0=t;E.s0=s;E.src.playbackRate.setValueAtTime(s,t);shift(q)}
+function ended(){const d=E.d0;E.on=false;E.src=null;E.pos=d>0?dur():0;if(E.ov==null&&d>0)step(1)}
+function play(){if(!E.buf)return;if(ctx.state==='suspended')ctx.resume();
+ if(rev&&E.pos<=.05)E.pos=dur();if(!rev&&E.pos>=dur()-.01)E.pos=0;E.on=true;startSrc()}
+function pause(){E.pos=Tb();E.on=false;killSrc()}
+// shuttle: while the lever is pushed (or the wheel scrubbed in TAPE mode) the tape runs at signed rate v, audibly, forwards or backwards
+function setOv(v){
+ if(v!=null){const p=Tb();if(v>0&&p>=dur()-.01)v=0;if(v<0&&p<=.01)v=0}
+ if(v===E.ov)return;
+ if(v!=null&&E.ov!=null&&v!==0&&E.ov!==0&&Math.sign(v)===Math.sign(E.ov)&&Math.abs(v-E.ov)<Math.abs(E.ov)*.01)return;
+ if(E.ov==null&&v!=null)E.ovWas=E.on;
+ E.ov=v;
+ if(v==null){
+  if(E.ovWas){const p=Tb();if(!rev&&p>=dur()-.01){E.pos=dur();E.on=false;killSrc();step(1)}else if(rev&&p<=.01)pause();else{E.pos=p;E.on=true;startSrc()}}
+  else pause();
+  return}
+ if(v===0){if(E.on){E.pos=Tb();E.on=false;killSrc()}return}
+ if(!E.on){if(ctx.state==='suspended')ctx.resume();E.on=true;startSrc()}else replan()}
+
+// ---------- controls ----------
+function applySpeed(){showRate(mode==='e'?Math.min(ASMAX,Math.max(ASMIN,speed)):speed);
+ if(mode==='e'&&A){A.defaultPlaybackRate=A.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(A)}else replan()}
+const pitchMode=a=>{a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=!tape};
+function setSpeed(v){speed=Math.round(clampS(v)*1e4)/1e4;applySpeed()}
+function setPitch(v){pst=Math.round(Math.min(PMAX,Math.max(-PMAX,v))*100)/100;showPitch();replan()}
+function nudge(d){setSpeed(speed*Math.pow(2,d/12))}
+function hold(id,fn){const b=$(id);let to,iv;const stop=()=>{clearTimeout(to);clearInterval(iv)};
+ b.onpointerdown=()=>{fn();to=setTimeout(()=>{iv=setInterval(fn,110)},350)};
+ b.onpointerup=b.onpointerleave=b.onpointercancel=stop}
+hold('slow',()=>nudge(-1));hold('fast',()=>nudge(1));hold('pdn',()=>setPitch(pst-1));hold('pup',()=>setPitch(pst+1));
+$('rate').onclick=()=>setSpeed(1);$('pitch').onclick=()=>setPitch(0);
+function setRev(v){rev=v;$('rev').classList.toggle('on',rev);
+ if(mode==='e'&&rev){rev=false;$('rev').classList.remove('on');msg('Reverse needs the full-quality engine; this track is streaming.');return}
+ if(mode==='b'&&E.on&&rev&&Tb()<=.05)E.pos=dur();replan();flash(rev?'REVERSE':'FORWARD')}
+$('rev').onclick=()=>setRev(!rev);
+$('mbtn').onclick=$('dot').onclick=()=>$('wm').click();
+$('stop').onclick=()=>{if(cur<0)return;if(playing())toggle();else seek(0)};
+function flash(x){$('ttl').textContent=x;clearTimeout(fl);fl=setTimeout(()=>{$('ttl').textContent=cur>=0?tracks[cur].title:'NO TAPE'},900)}
+function setVol(v){vol=Math.min(1,Math.max(0,v));if(gn)gn.gain.value=vol;if(mode==='e'&&fake&&A)A.volume=vol;$('knob').style.backgroundPosition=Math.round(vol*300)+'px 0';flash('VOL '+Math.round(vol*100))}
+$('vp').onclick=()=>setVol(vol+.05);$('vm').onclick=()=>setVol(vol-.05);
+const kb=$('knob');let kx=null;kb.style.backgroundPosition=Math.round(vol*300)+'px 0';
+kb.onpointerdown=e=>{kx=e.clientX;kb.setPointerCapture(e.pointerId)};
+kb.onpointermove=e=>{if(kx==null)return;setVol(vol+(e.clientX-kx)/200);kx=e.clientX};
+kb.onpointerup=kb.onpointercancel=()=>{kx=null};
+kb.addEventListener('wheel',e=>{e.preventDefault();setVol(vol-e.deltaY/1500)},{passive:false});
+// transport lever: push up = fast forward, down = rewind (audible, incl. reverse), springs back
+const lev=$('lev'),lt=$('lt');let lp=0,lacc=0,lt0=performance.now(),ld=false;
+lev.onpointerdown=e=>{ld=true;lev.setPointerCapture(e.pointerId);lev.style.transition='none'};
+lev.onpointermove=e=>{if(!ld)return;const r=lt.getBoundingClientRect();lp=Math.max(-1,Math.min(1,(.5-(e.clientY-r.top)/r.height)*2.6));lev.style.top=(50-lp*38)+'%'};
+lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='top .2s';lev.style.top='50%'};
+$('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpeed();msg(tape?'Tape mode: pitch follows speed; scrub the wheel to hear it forwards and backwards.':'')};
+
+// ---------- loading ----------
+function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
+let LG=0;const MAXDEC=120e6; // files bigger than this stream through <audio> instead of being decoded to memory
+async function load(i,autoplay=true){
+ if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];
+ if(t.blob&&!t.src){t.ready&&t.ready.then(()=>load(i,autoplay));return}
+ const g=++LG;stopAll();
+ $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';render();
+ try{ensureCtx();if(ctx.state==='suspended')ctx.resume()}catch(e){return msg('Web Audio is not available in this browser.')}
+ msg('Loading…');
+ let ab=null;
+ for(const u of t.blob?[t.src]:[t.src,'/api/proxy?url='+encodeURIComponent(t.src)]){
+  try{const r=await fetch(u);if(r.ok){ab=await r.arrayBuffer();break}}catch(e){}
+  if(g!==LG)return}
+ if(g!==LG)return;
+ if(ab&&ab.byteLength<MAXDEC){
+  try{await wkP;const b=await ctx.decodeAudioData(ab);if(g!==LG)return;
+   mode='b';fake=false;E.buf=b;E.rb=null;E.pos=0;msg('');$('dur').textContent=fmt(b.duration);replan();
+   if(autoplay)play();return}catch(e){}}
+ if(g!==LG)return;
+ fallback(t,i,autoplay,g)}
+// plain <audio> element: used only when the file can't be fetched/decoded. Speed is limited to 0.06-16x, no reverse.
+function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode: this link can’t be decoded, so speed is limited to 0.06–16× and reverse is off.');
+ if(rev)setRev(false);
+ // stage 0: direct (CORS) -> 1: via /api/proxy (real meter) -> 2: direct, simulated meter
+ const attempt=stage=>{
+  const a=new Audio(),src=stage===1?'/api/proxy?url='+encodeURIComponent(t.src):t.src;
+  if(stage<2&&!t.blob)a.crossOrigin='anonymous';a.src=src;a.preload='auto';a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);a.onended=()=>step(1);
+  A=a;a.onerror=()=>{if(A!==a)return;if(!t.blob&&stage<2)attempt(stage+1);else msg('Could not load that audio.')};
+  if(stage===2){fake=true;a.volume=vol}else{try{ctx.createMediaElementSource(a).connect(dry);bypass();a.volume=1;fake=false}catch(e){fake=true;a.volume=vol}}
+  if(stage===2)bypass();
+  showRate(Math.min(ASMAX,Math.max(ASMIN,speed)));
+  if(autoplay)a.play().catch(()=>msg('Press play to start.'))};
+ attempt(0)}
+const playing=()=>mode==='b'?E.on:!!(A&&!A.paused&&!A.ended);
+const T=()=>mode==='b'?Tb():(A?A.currentTime:0);
+const D=()=>mode==='b'?dur():(A&&isFinite(A.duration)?A.duration:0);
+function seek(t){t=Math.min(Math.max(0,t),D()||t);if(mode==='b'){E.pos=t;if(E.on)startSrc()}else if(A)A.currentTime=t}
+function toggle(){if(cur<0){if(tracks.length)load(0);return}
+ if(ctx&&ctx.state==='suspended')ctx.resume();
+ if(mode==='b'){if(!E.buf)return;E.on?pause():play()}else if(A){A.paused?A.play():A.pause()}}
+function step(d){if(!tracks.length)return;const n=cur+d;if(n>=0&&n<tracks.length)load(n);else if(d>0){cur=-1;$('st').textContent='STOP'}}
+
+function add(t,play){tracks.push(t);save();render();if(play||cur<0)load(tracks.length-1)}
+function addUrl(u){u=u.trim();if(!u)return;
+ if(/(^|\/\/|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)/i.test(u))return msg('YouTube links aren’t supported. Use a direct audio link or add files.');
+ try{const n=decodeURIComponent(new URL(u).pathname.split('/').pop())||u;add({title:n,src:u},true)}catch(e){msg('That does not look like a valid URL.')}}
+$('add').onclick=()=>{addUrl($('url').value);$('url').value=''};
+$('url').onkeydown=e=>{if(e.key==='Enter')$('add').click()};
+$('files').onchange=e=>{[...e.target.files].forEach((f,i)=>add(keep(f,f.name),i===0));e.target.value=''};
+
+function render(){$('list').innerHTML='';tracks.forEach((t,i)=>{const li=document.createElement('li');if(i===cur)li.className='cur';
+ li.innerHTML='<b>'+String(i+1).padStart(2,'0')+'</b><span></span><u title="Remove">✕</u>';li.children[1].textContent=t.title;
+ li.onclick=()=>load(i);li.children[2].onclick=ev=>{ev.stopPropagation();if(tracks[i].id)idbDel(tracks[i].id);tracks.splice(i,1);if(i===cur){cur=-1;LG++;stopAll();$('ttl').textContent='NO TAPE'}else if(i<cur)cur--;save();render()};
+ $('list').appendChild(li)})}
+
+// mic recording
+let mr=null,chunks=[];
+$('rec').onclick=async()=>{
+ if(mr){mr.stop();return}
+ try{const st=await navigator.mediaDevices.getUserMedia({audio:true});mr=new MediaRecorder(st);chunks=[];
+  mr.ondataavailable=e=>chunks.push(e.data);
+  mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());const b=new Blob(chunks,{type:mr.mimeType});mr=null;$('rec').classList.remove('on');
+   add(keep(b,'REC '+new Date().toLocaleTimeString()),true)};
+  mr.start();$('rec').classList.add('on');if(playing())toggle()}catch(e){msg('Microphone access denied.')}};
+$('pp').onclick=toggle;$('prev').onclick=()=>T()>3?seek(0):step(-1);$('next').onclick=()=>step(1);
+addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();toggle()}
+ if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();
+ if(e.code==='ArrowRight')seek(T()+5);if(e.code==='ArrowLeft')seek(T()-5)});
+
+// wheel: drag to scrub, spins when playing
+const W=$('wheel');let drag=false,last=0;
+const pa=e=>{const r=W.getBoundingClientRect();return Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2)*180/Math.PI};
+let wm='seek',off=0,acc=1,moved=false,downOnHub=false;
+function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed')}
+$('wm').onclick=()=>setWm(wm==='seek'?'speed':'seek');
+addEventListener('keydown',e=>{if(e.target.tagName!=='INPUT'&&e.key.toLowerCase()==='m')$('wm').click()});
+let vs=0,lastMv=0;
+const wheelBy=d=>{if(wm==='seek'){if(!(tape&&mode==='b'))seek(T()+d/12)}else{off+=d;acc=clampS(acc*Math.pow(2,d/360));setSpeed(acc)}};
+W.onpointerdown=e=>{drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing'};
+W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;wheelBy(d)};
+W.onpointerup=()=>{if(drag&&!moved&&downOnHub)$('wm').click();drag=false;W.style.cursor='grab'};
+W.onwheel=e=>{e.preventDefault();if(wm==='seek')seek(T()+e.deltaY/40);else{acc=speed;nudge(e.deltaY<0?1:-1);off-=e.deltaY/4}};
+
+// shuttle / tape varispeed: in TAPE mode the wheel scrub sets the tape rate (30deg/s = 1x, backwards = reverse audio);
+// the lever always shuttles audibly (up = forward up to 16x speed, down = reverse up to 16x)
+(function tk(n){
+ const scrub=drag&&wm==='seek';if(scrub&&n-lastMv>70)vs*=.75;
+ if(mode==='b'&&E.buf){
+  let r=null;
+  if(scrub&&tape){r=vs/30;if(Math.abs(r)<.03)r=0}
+  else if(Math.abs(lp)>.06)r=lp>0?speed*Math.pow(2,lp*4):-Math.pow(2,-lp*4);
+  setOv(r)}
+ else if(mode==='e'&&lp){const dt=Math.min(.1,(n-lt0)/1000);lacc+=lp*dt*8;if(Math.abs(lacc)>.05){seek(T()+lacc);lacc=0}}
+ lt0=n;requestAnimationFrame(tk)})(lt0);
+
+// loop: OLED, platter, level meters, LED
+const cv=$('mt'),g=cv.getContext('2d'),buf=new Uint8Array(128);let lvl=0;
+(function loop(){
+ const t=T(),d=D(),p=playing()||E.ov!=null&&E.ov!==0;
+ $('tm').textContent=Math.floor(t/3600)+'.'+String(Math.floor(t/60)%60).padStart(2,'0')+'.'+String(Math.floor(t%60)).padStart(2,'0');
+ if(d)$('dur').textContent=fmt(d);
+ $('st').textContent=mr?'REC':p?(E.d0<0&&mode==='b'?'REV':'PLAY'):cur<0?'STOP':'PAUSE';$('pp').textContent=playing()?'❚❚':'▶';
+ $('rot').style.transform='rotate('+((t*30+off)%360)+'deg)';
+ $('dot').classList.toggle('pl',p);$('dot').classList.toggle('rec',!!mr);
+ let v=0;if(p){if(an&&!fake){an.getByteTimeDomainData(buf);let m=0;for(const b of buf)m=Math.max(m,Math.abs(b-128));v=m/128}else v=.25+.35*Math.abs(Math.sin(t*7.3)*Math.sin(t*2.1))}
+ lvl+=(v-lvl)*.3;g.clearRect(0,0,98,160);
+ [[35.5,1],[67.5,.93]].forEach(([x,k])=>{for(let i=0;i<16;i++){const on=i/16<lvl*k*1.6;g.fillStyle=on?(i>12?'#ff4f12':C.lit):C.un;g.fillRect(x-2,150-i*10,4,8)}});
+ requestAnimationFrame(loop)})();
+$('ed').onclick=()=>{ed=ed==='al'?'bk':'al';applyTheme()};$('pg').onclick=()=>{pg=pg==='dark'?'light':'dark';applyTheme()};applyTheme();
+
+// ---------- install (PWA) + optional installer downloads ----------
+// To offer the Windows / Android installers on the site, host them (e.g. GitHub Releases) and put the URLs here,
+// or drop them in public/downloads/ as tp7-windows.zip and tp7.apk (each file must stay under the 25 MB Workers-assets limit).
+const DL={win:'',apk:''};
+let ip=null;addEventListener('beforeinstallprompt',e=>{e.preventDefault();ip=e});
+const inApp=/Electron/i.test(navigator.userAgent)||!!window.Capacitor||matchMedia('(display-mode: standalone)').matches;
+if(inApp)$('inst').hidden=true;
+$('pwa').onclick=async()=>{if(ip){ip.prompt();ip=null}else msg(/iPhone|iPad|iPod/.test(navigator.userAgent)?'On iPhone/iPad: Share → Add to Home Screen.':'Use your browser menu → Install app (or Add to Home screen). It then works offline.')};
+[['dlw',DL.win,'downloads/tp7-windows.zip'],['dla',DL.apk,'downloads/tp7.apk']].forEach(([id,u,def])=>{const a=$(id);
+ if(u){a.href=u;a.hidden=false}
+ else if(/^https?:/.test(location.protocol))fetch(def,{method:'HEAD'}).then(r=>{if(r.ok&&!/html/.test(r.headers.get('content-type')||'')){a.href=def;a.download='';a.hidden=false}}).catch(()=>{})});
+if('serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+showPitch();render();if(tracks.length){cur=0;$('ttl').textContent=tracks[0].title;$('trk').textContent='01';render()}
+</script></script></body></html>

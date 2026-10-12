@@ -1,0 +1,44 @@
+name: build-apps
+# Run from the Actions tab ("Run workflow") to get downloadable artifacts,
+# or push a tag like v1.1 to also publish them on the GitHub Releases page.
+on: { workflow_dispatch: {}, push: { tags: ['v*'] } }
+permissions: { contents: write }
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install
+      - run: npm run dist:win
+      - uses: actions/upload-artifact@v4
+        with: { name: tp7-windows, path: "dist/tp7-setup.exe\ndist/tp7-portable.exe" }
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21 }
+      - run: npm install
+      - run: npx cap add android
+      - name: Microphone permission (for the REC key)
+        run: |
+          sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <application#' android/app/src/main/AndroidManifest.xml
+      - run: npx @capacitor/assets@3.0.5 generate --android || true
+      - run: npx cap sync android
+      - run: cd android && ./gradlew assembleDebug
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk tp7.apk
+      - uses: actions/upload-artifact@v4
+        with: { name: tp7-android-apk, path: tp7.apk }
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, android]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { path: out, merge-multiple: true }
+      - uses: softprops/action-gh-release@v2
+        with: { files: "out/*" }

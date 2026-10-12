@@ -1,0 +1,16 @@
+{
+  "appId": "dev.tp7.player",
+  "appName": "TP-7",
+  "webDir": "public",
+  "server": {
+    "androidScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
+}

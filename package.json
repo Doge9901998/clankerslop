@@ -1,0 +1,51 @@
+{
+  "name": "tp7",
+  "version": "1.0.0",
+  "description": "TP-7 style audio player",
+  "main": "electron/main.js",
+  "author": "you",
+  "scripts": {
+    "app": "electron .",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:linux": "electron-builder --linux --publish never",
+    "android:add": "cap add android",
+    "android:sync": "cap sync android"
+  },
+  "devDependencies": {
+    "@capacitor/android": "8.5.2",
+    "@capacitor/cli": "8.5.2",
+    "@capacitor/core": "8.5.2",
+    "electron": "44.4.5",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "dev.tp7.player",
+    "productName": "TP-7",
+    "files": [
+      "electron/**",
+      "public/**",
+      "package.json"
+    ],
+    "icon": "public/icon-512.png",
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo",
+      "maintainer": "you <you@example.com>"
+    },
+    "nsis": {
+      "artifactName": "tp7-setup.${ext}"
+    },
+    "portable": {
+      "artifactName": "tp7-portable.${ext}"
+    }
+  }
+}
