@@ -74,7 +74,7 @@ html[data-ed=al] #hub{background:linear-gradient(135deg,#cdced0 0,#d6d7d9 28%,#e
 #list{list-style:none;margin:12px 0 0;padding:0;font-size:12px;max-height:200px;overflow:auto}
 #list li{content-visibility:auto;contain-intrinsic-size:auto 34px;display:flex;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;cursor:pointer}#list li.cur{background:var(--pcur)}
 #list li b{font-family:ui-monospace,monospace;width:22px;color:#e8440e}#list li span{flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#list li u{text-decoration:none;opacity:.5;padding:0 4px}
-button,.side,.key,#lev,#knob{touch-action:manipulation}.stage,.stage *{-webkit-tap-highlight-color:transparent}
+button,.side,.key{touch-action:manipulation}#lev,#knob,#wheel,#slow,#fast,#pdn,#pup,#vp,#vm{touch-action:none}#lev,#knob,#wheel{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.stage,.stage *{-webkit-tap-highlight-color:transparent}
 </style><script>try{const t=JSON.parse(localStorage.getItem('tp7.theme')||'{}'),d=document.documentElement.dataset;d.ed=t.ed||'bk';d.pg=t.pg||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light')}catch(e){document.documentElement.dataset.ed='bk';document.documentElement.dataset.pg='light'}</script></head><body>
 <div class="stage"><div class="dev">
 <i class="ant"></i><b class="logo">TP-7</b><i class="mic" style="left:33.8%"></i><i class="mic" style="left:50%"></i>
@@ -128,7 +128,7 @@ const keep=(b,title)=>{const t=mkTrack(b,title);idbPut(t.id,b);return t};
 const idbPutAll=pairs=>idb.then(d=>d&&new Promise(r=>{const t=d.transaction('f','readwrite'),o=t.objectStore('f');pairs.forEach(([k,b])=>o.put(b,k));t.oncomplete=()=>r(1);t.onerror=()=>r(0)}));
 tracks=tracks.filter(t=>!t.yt&&(!t.blob||t.id)); // YouTube entries from older versions are dropped
 tracks.forEach(t=>{if(t.blob)t.ready=idbGet(t.id).then(b=>{if(b)t.src=URL.createObjectURL(b);else t.dead=1})});
-Promise.all(tracks.map(t=>t.ready)).then(()=>{tracks=tracks.filter(t=>!t.dead);if(cur>=tracks.length)cur=tracks.length?0:-1;save();render()});
+Promise.all(tracks.map(t=>t.ready)).then(()=>{tracks=tracks.filter(t=>!t.dead);if(cur>=tracks.length)cur=tracks.length?0:-1;{const L=lastSaved(),i=L?tracks.findIndex(x=>tkey(x)===L.k):-1;if(i>=0&&!playing()&&!E.buf){cur=i;resume=L;$('ttl').textContent=tracks[i].title;$('trk').textContent=String(i+1).padStart(2,'0')}}save();render()});
 try{navigator.storage.persist()}catch(e){}
 const msg=t=>$('msg').textContent=t||'';
 const fmt=s=>{s=Math.max(0,s||0);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')};
@@ -250,7 +250,9 @@ $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpe
 
 // ---------- loading ----------
 function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
-let LG=0;const MAXDEC=120e6; // files bigger than this stream through <audio> instead of being decoded to memory
+// decoded audio is ~20x the file size in RAM, so phones get a much lower ceiling (bigger files stream through <audio> instead of being decoded)
+const MOBILE=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!(navigator.deviceMemory&&navigator.deviceMemory<=4);
+let LG=0;const MAXDEC=MOBILE?10e6:40e6;
 async function load(i,autoplay=true){
  if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];bag.add(t);
  if(t.file&&!t.src)t.src=URL.createObjectURL(t.file); // created on first play, not at import
@@ -266,12 +268,12 @@ async function load(i,autoplay=true){
  if(g!==LG)return;
  if(ab&&ab.byteLength<MAXDEC){
   try{await wkP;const b=await ctx.decodeAudioData(ab);if(g!==LG)return;
-   mode='b';fake=false;E.buf=b;E.rb=null;E.pos=0;msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
+   mode='b';fake=false;E.buf=b;E.rb=null;E.pos=0;if(resume&&resume.k===tkey(t)){E.pos=Math.max(0,Math.min(resume.t||0,b.duration-.05));resume=null}msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
    if(autoplay)play();return}catch(e){}}
  if(g!==LG)return;
  fallback(t,i,autoplay,g)}
 // plain <audio> element: used only when the file can't be fetched/decoded. Speed is limited to 0.06-16x, no reverse.
-function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode: this link can’t be decoded, so speed is limited to 0.06–16× and reverse is off.');
+function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode (file too large to hold in memory, or not decodable): speed limited to 0.06–16×, no reverse or scratch.');
  if(rev)setRev(false);
  // stage 0: direct (CORS) -> 1: via /api/proxy (real meter) -> 2: direct, simulated meter
  const attempt=stage=>{
@@ -364,7 +366,7 @@ let wm='seek',off=0,acc=1,moved=false,downOnHub=false;
 const WMS=['seek','speed','scratch'],SCR=200;let sc=false,scrA=0,scrA0=0,scrP=0;
 function prepScratch(){ // build the reversed copy up front so the first backwards scratch doesn't stall
  if(mode!=='b'){msg('Scratching needs a downloaded file, not a stream');return}
- if(E.buf&&!E.rb&&E.buf.length*E.buf.numberOfChannels<16e6)setTimeout(rbufAsync,60)} // long tracks: built on the first backwards move instead (a second copy would cost too much memory)
+ if(!MOBILE&&E.buf&&!E.rb&&E.buf.length*E.buf.numberOfChannels<16e6)setTimeout(rbufAsync,60)} // long tracks: built on the first backwards move instead (a second copy would cost too much memory)
 function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch')prepScratch()}
 $('wm').onclick=()=>setWm(WMS[(WMS.indexOf(wm)+1)%WMS.length]);
 try{const v=localStorage.getItem('tp7.wm');if(WMS.includes(v))setWm(v)}catch(e){}
@@ -429,5 +431,27 @@ if(!inApp)[['dlw',DL.win,'downloads/tp7-windows.zip'],['dla',DL.apk,'downloads/t
  if(u){a.href=u;a.hidden=false}
  else if(/^https?:/.test(location.protocol))fetch(def,{method:'HEAD'}).then(r=>{if(r.ok&&!/html/.test(r.headers.get('content-type')||'')){a.href=def;a.download='';a.hidden=false}}).catch(()=>{})});
 if('serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+// ---- background / reopen resilience ----
+// the page can be killed while another app is in front; remember where we were, free spare memory when hidden, wake audio on return
+const LASTK='tp7.last';let resume=null;
+function tkey(t){return t&&(t.id||t.src||t.title)}
+function lastSaved(){try{return JSON.parse(localStorage.getItem(LASTK)||'null')}catch(e){return null}}
+function saveLast(){try{if(cur<0||!tracks[cur])return;localStorage.setItem(LASTK,JSON.stringify({k:tkey(tracks[cur]),t:T()}))}catch(e){}}
+setInterval(()=>{if(playing())saveLast()},3000);
+addEventListener('pagehide',saveLast);
+document.addEventListener('visibilitychange',()=>{
+ if(document.hidden){saveLast();E.rb=null;rbJob++;return} // drop the reversed copy (rebuilt on demand)
+ if(!ctx)return;
+ if(ctx.state==='closed'){const k=tkey(tracks[cur]),t=E.pos;ctx=an=gn=dry=wet=wk=wkP=null;E.on=false;if(k){resume={k,t};if(cur>=0)load(cur,false)}}
+ else if(ctx.state!=='running')ctx.resume().catch(()=>{})});
+// lock-screen / notification controls also tell the OS this is a media player
+let miK='';
+function mediaInfo(){try{if(!('mediaSession'in navigator))return;const k=cur+':'+playing();if(k===miK)return;miK=k;const t=tracks[cur];
+ navigator.mediaSession.metadata=t?new MediaMetadata({title:t.title,artist:'TP-7'}):null;navigator.mediaSession.playbackState=playing()?'playing':'paused'}catch(e){}}
+try{const ms=navigator.mediaSession;if(ms){const h=(a,f)=>{try{ms.setActionHandler(a,f)}catch(e){}};
+ h('play',()=>{if(!playing())toggle()});h('pause',()=>{if(playing())toggle()});h('stop',()=>{if(playing())toggle()});h('previoustrack',()=>step(-1));h('nexttrack',()=>step(1))}}catch(e){}
+setInterval(mediaInfo,1000);
+// touch: dragged controls must never hand the gesture to page scrolling
+[lev,kb,W].forEach(el=>{el.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault()},{passive:false});el.addEventListener('contextmenu',e=>e.preventDefault())});
 showPitch();render();if(tracks.length){cur=0;$('ttl').textContent=tracks[0].title;$('trk').textContent='01';render()}
-</script></script></body></html>
+</script></body></html>
