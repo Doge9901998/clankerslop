@@ -166,8 +166,8 @@ function ensureCtx(){if(ctx)return;
   ).catch(()=>{wk=null;msg('Pitch shifter not available here: pitch follows speed.')})}
 
 // ---------- buffer engine (audio files / links / recordings) ----------
-const E={buf:null,rb:null,src:null,on:false,pos:0,t0:0,p0:0,s0:1,d0:1,ov:null,ovWas:false,gen:0};
-const dur=()=>E.buf?E.buf.duration:0;
+const E={buf:null,rb:null,rw:null,dd:0,src:null,on:false,pos:0,t0:0,p0:0,s0:1,d0:1,ov:null,ovWas:false,gen:0};
+const dur=()=>E.buf?E.buf.duration:E.dd; // dd = length of the track whose decoded copy was dropped while in the background
 function Tb(){if(!E.on||!ctx)return E.pos;return Math.min(Math.max(E.p0+E.d0*(ctx.currentTime-E.t0)*E.s0,0),dur())}
 let scratching=false; // true while the platter is being scratched: pitch must follow speed like a real record
 function plan(){let s,d;if(E.ov!=null){s=Math.abs(E.ov);d=E.ov<0?-1:1}else{s=speed;d=rev?-1:1}
@@ -181,22 +181,33 @@ function shift(q){if(!wk)return;const t=ctx.currentTime,on=Math.abs(Math.log2(q)
  wk.parameters.get('r').setValueAtTime(q,t);dry.gain.setTargetAtTime(on?0:1,t,.01);wet.gain.setTargetAtTime(on?1:0,t,.01)}
 function bypass(){if(!ctx)return;dry.gain.value=1;wet.gain.value=0;wkSet(false)}
 let rbJob=0;
-function rbufAsync(){const b=E.buf;if(!b||E.rb||!ctx)return;const job=++rbJob,n=b.length,CH=1<<19,r=ctx.createBuffer(b.numberOfChannels,n,b.sampleRate);let c=0,i=0;
+// Reverse playback needs a backwards copy of the audio. A full second copy of a long track doubles the memory use (the thing that gets a
+// phone app killed), so long tracks and phones only get a ~30 s window around the playhead that is rebuilt when playback leaves it.
+const RWIN=30,bigRev=()=>MOBILE||E.buf.length*E.buf.numberOfChannels>16e6;
+function rbufAsync(){const b=E.buf;if(!b||E.rb||!ctx||bigRev())return;const job=++rbJob,n=b.length,CH=1<<19,r=ctx.createBuffer(b.numberOfChannels,n,b.sampleRate);let c=0,i=0;
  (function step(){if(job!==rbJob||E.buf!==b||E.rb)return;const sr=b.getChannelData(c),d=r.getChannelData(c),e=Math.min(n,i+CH);
   d.set(sr.subarray(i,e),n-e);d.subarray(n-e,n-i).reverse();i=e;
-  if(i>=n){i=0;c++;if(c>=b.numberOfChannels){E.rb=r;return}}setTimeout(step,0)})()}
-function rbuf(){if(!E.rb){rbJob++;const b=E.buf,r=ctx.createBuffer(b.numberOfChannels,b.length,b.sampleRate);
- for(let c=0;c<b.numberOfChannels;c++){const d=r.getChannelData(c);d.set(b.getChannelData(c));d.reverse()}E.rb=r}return E.rb}
+  if(i>=n){i=0;c++;if(c>=b.numberOfChannels){E.rb=r;E.rw=[0,b.duration];return}}setTimeout(step,0)})()}
+function rbuf(p){const b=E.buf,w=E.rw;
+ if(E.rb&&w&&p>=w[0]-.001&&p<=w[1]+.001&&(w[0]<=.001||p-w[0]>.5))return E.rb; // still inside the current window (with some room left below the playhead)
+ rbJob++;let a=0,e=b.duration;if(bigRev()){e=Math.min(b.duration,p+2);a=Math.max(0,e-RWIN)}
+ const sr=b.sampleRate,i0=Math.floor(a*sr),i1=Math.min(b.length,Math.ceil(e*sr)),n=Math.max(1,i1-i0),r=ctx.createBuffer(b.numberOfChannels,n,sr);
+ for(let c=0;c<b.numberOfChannels;c++){const d=r.getChannelData(c);d.set(b.getChannelData(c).subarray(i0,i1));d.reverse()}
+ E.rb=r;E.rw=[i0/sr,i0/sr+n/sr];return r}
 function killSrc(){E.gen++;if(E.src){try{E.src.onended=null;E.src.stop()}catch(e){}try{E.src.disconnect()}catch(e){}E.src=null}}
-function startSrc(){killSrc();if(!E.buf||!ctx)return;const{s,d,q}=plan(),D=dur();
- const off=Math.min(Math.max(d>0?E.pos:D-E.pos,0),Math.max(0,D-.001));
- const n=ctx.createBufferSource();n.buffer=d>0?E.buf:rbuf();n.playbackRate.value=s;n.connect(dry);if(wk)n.connect(wk);
+function startSrc(){killSrc();if(!E.buf||!ctx)return;const{s,d,q}=plan();
+ const n=ctx.createBufferSource();let off;
+ if(d>0){n.buffer=E.buf;off=E.pos}else{n.buffer=rbuf(E.pos);off=E.rw[1]-E.pos} // reversed buffer: time runs from the end of its window
+ off=Math.min(Math.max(off,0),Math.max(0,n.buffer.duration-.001));
+ n.playbackRate.value=s;n.connect(dry);if(wk)n.connect(wk);
  const g=++E.gen;n.onended=()=>{if(g===E.gen)ended()};
  E.src=n;E.t0=ctx.currentTime;E.p0=E.pos;E.s0=s;E.d0=d;shift(q);n.start(0,off)}
 function replan(){if(!E.on||!E.src)return;const{s,d,q}=plan();E.pos=Tb();
  if(d!==E.d0){startSrc();return}
  const t=ctx.currentTime;E.p0=E.pos;E.t0=t;E.s0=s;E.src.playbackRate.setValueAtTime(s,t);shift(q)}
-function ended(){const d=E.d0;E.on=false;E.src=null;E.pos=d>0?dur():0;if(E.ov!=null)return;if(d>0)auto();else if(d<0&&lm==='one')play()} // reverse + loop one: wrap back to the end
+function ended(){const d=E.d0;
+ if(d<0&&E.on&&E.rw&&E.rw[0]>.02){E.pos=E.rw[0];startSrc();return} // backwards: this window is used up, carry on into the next one
+ E.on=false;E.src=null;E.pos=d>0?dur():0;if(E.ov!=null)return;if(d>0)auto();else if(d<0&&lm==='one')play()} // reverse + loop one: wrap back to the end
 function play(){if(!E.buf)return;if(ctx.state==='suspended')ctx.resume();
  if(rev&&E.pos<=.05)E.pos=dur();if(!rev&&E.pos>=dur()-.01)E.pos=0;E.on=true;startSrc()}
 function pause(){E.pos=Tb();E.on=false;killSrc()}
@@ -249,32 +260,51 @@ lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='tra
 $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpeed();msg(tape?'Tape mode: pitch follows speed; scrub the wheel to hear it forwards and backwards.':'')};
 
 // ---------- loading ----------
-function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
+function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
 // decoded audio is ~20x the file size in RAM, so phones get a much lower ceiling (bigger files stream through <audio> instead of being decoded)
 const MOBILE=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!(navigator.deviceMemory&&navigator.deviceMemory<=4);
 let LG=0;const MAXDEC=MOBILE?10e6:40e6;
+// phones also get a budget for the *decoded* size (a low-bitrate MP3 can be tiny on disk and still unpack to hundreds of MB)
+const DECMAX=MOBILE?Math.min(160,Math.max(60,(navigator.deviceMemory||4)*32))*1e6:1e12;
+let lite=false,freed=false,bgRev=false,RG=0; // lite: playing through <audio> only because the page is in the background; freed: decoded copy dropped while paused in the background
+function probe(u){return new Promise(r=>{const a=new Audio();let done=0;const to=setTimeout(()=>f(0),3000);
+ const f=v=>{if(done)return;done=1;clearTimeout(to);a.onloadedmetadata=a.onerror=null;try{a.removeAttribute('src');a.load()}catch(e){}r(v)};
+ a.preload='metadata';a.onloadedmetadata=()=>f(isFinite(a.duration)?a.duration:0);a.onerror=()=>f(0);a.src=u})} // track length without decoding it
+// fetch + decode a track into a Web Audio buffer; null when it is superseded, too big for this device, or not decodable
+async function getBuf(t,g){
+ let ab=null;
+ for(const u of t.blob?[t.src]:[t.src,'/api/proxy?url='+encodeURIComponent(t.src)]){
+  try{const r=await fetch(u);if(r.ok){ab=await r.arrayBuffer();break}}catch(e){}
+  if(g!==LG)return null}
+ if(g!==LG||!ab||ab.byteLength>=MAXDEC)return null;
+ if(MOBILE){const du=await probe(t.src);if(g!==LG)return null;if(du&&du*(ctx.sampleRate||48e3)*8>DECMAX)return null}
+ try{await wkP;const b=await ctx.decodeAudioData(ab);return g===LG?b:null}catch(e){return null}}
+function takeResume(t){if(resume&&resume.k===tkey(t)){const v=Math.max(0,resume.t||0);resume=null;return v}return 0}
+const STREAMMSG='Streaming mode (file too large to hold in memory, or not decodable): speed limited to 0.06–16×, no reverse or scratch.';
 async function load(i,autoplay=true){
  if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];bag.add(t);
  if(t.file&&!t.src)t.src=URL.createObjectURL(t.file); // created on first play, not at import
  if(t.blob&&!t.src){t.ready&&t.ready.then(()=>load(i,autoplay));return}
- const g=++LG;stopAll();
+ const g=++LG;stopAll();RG++;
  $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';mark();
+ if(MOBILE&&document.hidden)return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1}); // in the background: stream through <audio>, decode properly when the page comes back
  try{ensureCtx();if(ctx.state==='suspended')ctx.resume()}catch(e){return msg('Web Audio is not available in this browser.')}
  msg('Loading…');
- let ab=null;
- for(const u of t.blob?[t.src]:[t.src,'/api/proxy?url='+encodeURIComponent(t.src)]){
-  try{const r=await fetch(u);if(r.ok){ab=await r.arrayBuffer();break}}catch(e){}
-  if(g!==LG)return}
+ const b=await getBuf(t,g);
  if(g!==LG)return;
- if(ab&&ab.byteLength<MAXDEC){
-  try{await wkP;const b=await ctx.decodeAudioData(ab);if(g!==LG)return;
-   mode='b';fake=false;E.buf=b;E.rb=null;E.pos=0;if(resume&&resume.k===tkey(t)){E.pos=Math.max(0,Math.min(resume.t||0,b.duration-.05));resume=null}msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
-   if(autoplay)play();return}catch(e){}}
- if(g!==LG)return;
+ if(b&&MOBILE&&document.hidden)return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1}); // the page was hidden while this was decoding: don't keep the big buffer
+ if(b){
+  mode='b';fake=false;E.buf=b;E.dd=b.duration;E.rb=null;E.rw=null;E.pos=0;{const at=takeResume(t);if(at)E.pos=Math.min(at,b.duration-.05)}msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
+  if(autoplay)play();return}
  fallback(t,i,autoplay,g)}
-// plain <audio> element: used only when the file can't be fetched/decoded. Speed is limited to 0.06-16x, no reverse.
-function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode (file too large to hold in memory, or not decodable): speed limited to 0.06–16×, no reverse or scratch.');
- if(rev)setRev(false);
+// plain <audio> element. Used when a file can't be fetched/decoded or is too big to hold in memory (speed limited to 0.06-16x, no reverse),
+// and (o.lite) for playback while the page is in the background, where it only costs a few MB and lets the OS show its media notification.
+// o.at = start position in seconds.
+function fallback(t,i,autoplay,g,o){o=o||{};mode='e';E.buf=null;lite=!!o.lite;freed=false;
+ if(o.lite){msg('');if(rev){bgRev=true;rev=false;$('rev').classList.remove('on')}}
+ else{msg(STREAMMSG);if(rev)setRev(false)}
+ const go=a=>{const run=()=>{if(autoplay)a.play().catch(()=>msg('Press play to start.'))};
+  if(o.at>.05){const f=()=>{try{a.currentTime=o.at}catch(e){}run()};a.readyState>=1?f():a.addEventListener('loadedmetadata',f,{once:true})}else run()};
  // stage 0: direct (CORS) -> 1: via /api/proxy (real meter) -> 2: direct, simulated meter
  const attempt=stage=>{
   const a=new Audio(),src=stage===1?'/api/proxy?url='+encodeURIComponent(t.src):t.src;
@@ -283,8 +313,8 @@ function fallback(t,i,autoplay,g){mode='e';E.buf=null;msg('Streaming mode (file 
   if(stage===2){fake=true;a.volume=vol}else{try{ctx.createMediaElementSource(a).connect(dry);bypass();a.volume=1;fake=false}catch(e){fake=true;a.volume=vol}}
   if(stage===2)bypass();
   showRate(Math.min(ASMAX,Math.max(ASMIN,speed)));
-  if(autoplay)a.play().catch(()=>msg('Press play to start.'))};
- attempt(0)}
+  go(a)};
+ attempt(o.lite?2:0)}
 const playing=()=>mode==='b'?E.on:!!(A&&!A.paused&&!A.ended);
 const T=()=>mode==='b'?Tb():(A?A.currentTime:0);
 const D=()=>mode==='b'?dur():(A&&isFinite(A.duration)?A.duration:0);
@@ -366,7 +396,7 @@ let wm='seek',off=0,acc=1,moved=false,downOnHub=false;
 const WMS=['seek','speed','scratch'],SCR=200;let sc=false,scrA=0,scrA0=0,scrP=0;
 function prepScratch(){ // build the reversed copy up front so the first backwards scratch doesn't stall
  if(mode!=='b'){msg('Scratching needs a downloaded file, not a stream');return}
- if(!MOBILE&&E.buf&&!E.rb&&E.buf.length*E.buf.numberOfChannels<16e6)setTimeout(rbufAsync,60)} // long tracks: built on the first backwards move instead (a second copy would cost too much memory)
+ if(E.buf&&!E.rb)setTimeout(rbufAsync,60)} // short tracks on desktop get the whole reversed copy up front; long tracks / phones use a sliding window (see rbuf)
 function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch')prepScratch()}
 $('wm').onclick=()=>setWm(WMS[(WMS.indexOf(wm)+1)%WMS.length]);
 try{const v=localStorage.getItem('tp7.wm');if(WMS.includes(v))setWm(v)}catch(e){}
@@ -439,18 +469,84 @@ function lastSaved(){try{return JSON.parse(localStorage.getItem(LASTK)||'null')}
 function saveLast(){try{if(cur<0||!tracks[cur])return;localStorage.setItem(LASTK,JSON.stringify({k:tkey(tracks[cur]),t:T()}))}catch(e){}}
 setInterval(()=>{if(playing())saveLast()},3000);
 addEventListener('pagehide',saveLast);
+// ---- memory: what the page keeps while it is in the background ----
+// Android kills the biggest background app first when another app needs RAM, and the decoded audio (tens to hundreds of MB) is by far the
+// biggest thing this page holds. So on phones it is dropped the moment the page is hidden: playback carries on through a plain <audio>
+// element (it streams from the file, a few MB) and the full engine (reverse, pitch, scratch, >16x) is rebuilt when you come back.
+function goLite(){
+ if(!MOBILE||mode!=='b'||!E.buf||cur<0||!tracks[cur])return;
+ const t=tracks[cur],was=E.on,p=Tb();
+ if(!was&&E.buf.length*E.buf.numberOfChannels<4e6)return; // paused and tiny: not worth it
+ E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false; // a touch in progress can't finish while hidden
+ pause();E.pos=p;saveLast();E.buf=null;E.rb=null;E.rw=null;rbJob++;
+ if(was)fallback(t,cur,true,++LG,{at:p,lite:1});
+ else{freed=true;resume={k:tkey(t),t:p}} // paused: nothing to play, just free it (play from the notification reloads it)
+ try{ctx&&ctx.suspend()}catch(e){}}
+// back in the foreground: decode again and swap the full engine back in at the current position
+async function restore(){
+ const t=tracks[cur];if(!t||!(lite||freed))return;
+ const rg=++RG,g=LG;
+ try{ensureCtx();ctx.resume().catch(()=>{})}catch(e){return}
+ const b=await getBuf(t,g);
+ if(rg!==RG||g!==LG||!(lite||freed))return;
+ if(!b){ // too big to decode on this device: keep streaming
+  if(freed)fallback(t,cur,false,g,{at:E.pos});else{lite=false;msg(STREAMMSG)}
+  return}
+ let p,was=false;
+ if(lite){if(mode!=='e'||!A)return;was=playing();p=A.currentTime;A.pause();try{A.removeAttribute('src');A.load()}catch(e){}A=null}
+ else p=E.pos;
+ lite=freed=false;mode='b';fake=false;E.buf=b;E.dd=b.duration;E.rb=null;E.rw=null;E.on=false;E.pos=Math.max(0,Math.min(p,b.duration-.05));
+ $('dur').textContent=fmt(b.duration);showRate(speed);if(bgRev){bgRev=false;setRev(true)}replan();if(wm==='scratch')prepScratch();
+ if(was)play()}
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){saveLast();E.rb=null;rbJob++;return} // drop the reversed copy (rebuilt on demand)
- if(!ctx)return;
- if(ctx.state==='closed'){const k=tkey(tracks[cur]),t=E.pos;ctx=an=gn=dry=wet=wk=wkP=null;E.on=false;if(k){resume={k,t};if(cur>=0)load(cur,false)}}
- else if(ctx.state!=='running')ctx.resume().catch(()=>{})});
-// lock-screen / notification controls also tell the OS this is a media player
-let miK='';
-function mediaInfo(){try{if(!('mediaSession'in navigator))return;const k=cur+':'+playing();if(k===miK)return;miK=k;const t=tracks[cur];
- navigator.mediaSession.metadata=t?new MediaMetadata({title:t.title,artist:'TP-7'}):null;navigator.mediaSession.playbackState=playing()?'playing':'paused'}catch(e){}}
-try{const ms=navigator.mediaSession;if(ms){const h=(a,f)=>{try{ms.setActionHandler(a,f)}catch(e){}};
- h('play',()=>{if(!playing())toggle()});h('pause',()=>{if(playing())toggle()});h('stop',()=>{if(playing())toggle()});h('previoustrack',()=>step(-1));h('nexttrack',()=>step(1))}}catch(e){}
-setInterval(mediaInfo,1000);
+ if(document.hidden){saveLast();RG++;E.rb=null;E.rw=null;rbJob++;goLite();return} // the reversed copy is always dropped (rebuilt on demand)
+ if(ctx&&ctx.state==='closed'){const k=tkey(tracks[cur]),t=E.pos;ctx=an=gn=dry=wet=wk=wkP=null;E.on=false;lite=freed=false;if(k){resume={k,t};if(cur>=0)load(cur,false)}return}
+ if(ctx&&ctx.state!=='running')ctx.resume().catch(()=>{});
+ if(lite||freed)restore()});
+addEventListener('freeze',saveLast);
+
+// ---- notification / lock-screen controls ----
+// Browser / installed PWA: the standard Media Session API (Chrome shows its notification while an <audio> element plays, which is why the
+// page hands over to one in the background). Android/iOS app: the WebView has no system media UI, so the MediaSession plugin builds a real
+// media notification (foreground service) and sends its button presses back here. Only prev / play-pause / next / stop / seek bar fit on
+// a media notification; rec, volume, wheel and the other TP-7 controls can't be put there.
+const NATIVE=window.Capacitor&&typeof Capacitor.nativePromise==='function'&&typeof Capacitor.nativeCallback==='function'&&Capacitor.isNativePlatform&&Capacitor.isNativePlatform()?Capacitor:null;
+const nm=(m,o)=>{try{const r=NATIVE.nativePromise('MediaSession',m,o);r&&r.catch&&r.catch(()=>{})}catch(e){}};
+let engaged=false,ART='',miM='',miSt='',miD=-1,miR=0,miP=0,miN=0; // engaged: playback was started, so the notification may exist
+function doAct(a,x){
+ if(a==='play'){if(!playing())toggle()}
+ else if(a==='pause'){if(playing())toggle()}
+ else if(a==='stop'){engaged=false;if(playing())toggle();if(cur>=0)seek(0);mediaInfo(1)}
+ else if(a==='previoustrack')T()>3?seek(0):step(-1);
+ else if(a==='nexttrack')step(1);
+ else if(a==='seekto'){if(typeof x==='number'&&isFinite(x))seek(x)}
+ else if(a==='seekbackward')seek(T()-10);
+ else if(a==='seekforward')seek(T()+10)}
+function mediaInfo(force){try{
+ const t=tracks[cur],pl=playing();if(pl)engaged=true;
+ const st=!t?'none':pl?'playing':engaged?'paused':'none',now=Date.now(),d=D(),pos=Math.min(T(),d||T());
+ let r=1;if(mode==='b'){r=Math.min(16,Math.max(.05,E.on?E.s0:speed));if(E.on&&E.d0<0)r=-r}else if(A)r=Math.min(16,Math.max(.05,A.playbackRate||1));
+ r=+r.toFixed(3);
+ const mk=cur+'|'+(t&&t.title)+'|'+tracks.length,dd=Math.round(d);
+ if(!force&&mk===miM&&st===miSt&&dd===miD&&r===miR){ // nothing changed but the clock: only re-sync the position if it jumped (seek / scrub) or every 10 s
+  const exp=miP+(st==='playing'?(now-miN)/1000*r:0);if(Math.abs(pos-exp)<1.5&&now-miN<10000)return}
+ const metaChg=force||mk!==miM,stChg=force||st!==miSt;miM=mk;miSt=st;miD=dd;miR=r;miP=pos;miN=now;
+ const md=t?{title:t.title,artist:'TP-7',album:(cur+1)+' / '+tracks.length}:null;
+ if(NATIVE){
+  if(md&&metaChg)nm('setMetadata',ART?Object.assign({artwork:[{src:ART,sizes:'192x192',type:'image/png'}]},md):md);
+  if(stChg)nm('setPlaybackState',{playbackState:st});
+  if(st!=='none'&&d>0)nm('setPositionState',{duration:d,position:pos,playbackRate:r})}
+ if('mediaSession'in navigator){const ms=navigator.mediaSession;
+  if(metaChg)ms.metadata=md?new MediaMetadata(Object.assign({artwork:[{src:'icon-512.png',sizes:'512x512',type:'image/png'},{src:'icon-192.png',sizes:'192x192',type:'image/png'}]},md)):null;
+  ms.playbackState=st;
+  if(st!=='none'&&d>0&&isFinite(d))try{ms.setPositionState({duration:d,position:Math.max(0,Math.min(pos,d)),playbackRate:r})}catch(e){}}
+}catch(e){}}
+try{const ms=navigator.mediaSession;if(ms)['play','pause','stop','previoustrack','nexttrack','seekbackward','seekforward','seekto'].forEach(a=>{try{ms.setActionHandler(a,d=>doAct(a,d&&d.seekTime))}catch(e){}})}catch(e){}
+if(NATIVE){
+ ['play','pause','stop','previoustrack','nexttrack','seekto'].forEach(a=>{try{NATIVE.nativeCallback('MediaSession','setActionHandler',{action:a},d=>{if(d&&d.action)doAct(d.action,d.seekTime)})}catch(e){}});
+ nm('setPlaybackState',{playbackState:'none'}); // clears a notification left over from a previous run
+ fetch('icon-192.png').then(r=>r.blob()).then(b=>{const f=new FileReader();f.onload=()=>{ART=f.result;miM=''};f.readAsDataURL(b)}).catch(()=>{})} // album art for the notification
+setInterval(()=>mediaInfo(),400);
 // touch: dragged controls must never hand the gesture to page scrolling
 [lev,kb,W].forEach(el=>{el.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault()},{passive:false});el.addEventListener('contextmenu',e=>e.preventDefault())});
 showPitch();render();if(tracks.length){cur=0;$('ttl').textContent=tracks[0].title;$('trk').textContent='01';render()}

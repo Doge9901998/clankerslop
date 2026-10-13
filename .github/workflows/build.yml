@@ -52,6 +52,21 @@ jobs:
           sed -i 's#<application#<uses-permission android:name="android.permission.RECORD_AUDIO" />\n    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />\n    <application#' "$M"
           grep -q RECORD_AUDIO "$M" || { echo "::error::could not add the microphone permission to $M"; cat "$M"; exit 1; }
 
+      # Media notification + not crashing when Android reclaims memory (see android-overrides/MainActivity.java).
+      - name: Notification permissions and MainActivity override
+        run: |
+          set -e
+          M=android/app/src/main/AndroidManifest.xml
+          # Android 14+ refuses to start a media foreground service without its own permission (the app would crash on first play);
+          # Android 13+ only shows notifications once POST_NOTIFICATIONS is granted (MainActivity asks for it).
+          sed -i 's#<application#<uses-permission android:name="android.permission.FOREGROUND_SERVICE" />\n    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />\n    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />\n    <uses-permission android:name="android.permission.WAKE_LOCK" />\n    <application#' "$M"
+          for p in FOREGROUND_SERVICE_MEDIA_PLAYBACK POST_NOTIFICATIONS; do
+            grep -q "$p" "$M" || { echo "::error::could not add $p to $M"; cat "$M"; exit 1; }
+          done
+          D=android/app/src/main/java/dev/tp7/player
+          test -f "$D/MainActivity.java" || { echo "::error::generated MainActivity.java not found"; find android/app/src -name '*.java'; exit 1; }
+          cp android-overrides/MainActivity.java "$D/MainActivity.java"
+
       # Uses assets/icon-only.png, icon-foreground.png and icon-background.png.
       # Cosmetic only, so a failure here is a warning, but the next step makes sure it can't leave a broken res tree.
       - name: Generate launcher icons
