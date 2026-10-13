@@ -7,7 +7,14 @@ html{--pgbg:#cfcfcf;--pgfg:#1c1c1c;--pb:#1b1b1b;--pf:#eee;--pi:#ebebe8;--pif:#11
 html[data-ed=al]{--pgbg:#f0f0f1}
 html[data-pg=dark]{--pgbg:#121212;--pgfg:#ddd;--pb:#2d2d2d;--pi:#1e1e1e;--pif:#eee;--pcur:#fff2;color-scheme:dark}
 body{margin:0;background:var(--pgbg);font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;color:var(--pgfg);padding:84px 0 60px;display:flex;flex-direction:column;align-items:center}
-.stage{container-type:inline-size;width:min(440px,calc(100vw - 84px));margin-bottom:84px}
+.stage{container-type:inline-size;width:min(440px,calc(100vw - 84px));margin-bottom:84px;position:relative}
+.dev{transition:transform .38s cubic-bezier(.3,.8,.3,1),opacity .22s}
+.stage.vw .dev{opacity:0;transform:perspective(1400px) rotateY(70deg) scale(.94);pointer-events:none}
+.photo{position:absolute;left:0;right:0;top:-9cqw;bottom:-19cqw;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3cqw;opacity:0;transform:perspective(1400px) rotateY(-70deg) scale(.94);transition:transform .38s cubic-bezier(.3,.8,.3,1),opacity .22s;pointer-events:none}
+.stage.vw .photo{opacity:1;transform:perspective(1400px)}
+.photo img{max-width:100%;max-height:calc(100% - 9cqw);object-fit:contain;filter:drop-shadow(0 2.4cqw 3cqw #0005);-webkit-user-drag:none;user-select:none}
+.photo figcaption{font:600 2.7cqw ui-monospace,Menlo,monospace;letter-spacing:.14em;opacity:.65;text-align:center}
+#vw button{padding:0 4px}#vw .on{background:#ff4f12}
 .dev{--b1:#1c1c1c;--b2:#121212;--hl:#3a3a3a;--ring:#000;--sh:#0007;--logo:#cdcdcd;--micbg:#050505;--micr:#2a2a2a;--bxbg:#e6e6e6;--bxfg:#111;--nbg:#e6e6e6;--nfg:#111;--nbd:#e6e6e6;--pbg:#e6e6e6;--pfg:#111;--pbd:#e6e6e6;--s1:#1c1c1c;--s2:#2c2c2c;--sring:#000;--l1:#151515;--l2:#222;--lring:#2d2d2d;--lring2:#000;--h1:#232323;--h2:#141414;--screw1:#4a4a4a;--screw2:#0c0c0c;--lab:#d6d6d6;--p1:#181818;--p2:#101010;--pr1:#333;--pr2:#080808;--pin:#000;--dg:#c9c9c9;--pt:#cfcfcf;--hub1:#0d0d0d;--hub2:#020202;--hubr:#1c1c1c;--hd1:#555;--hd2:#1a1a1a;--d1:#8a8a85;--d2:#4c4c49;--dr:#1a1a1a;--c1:#121212;--cr1:#2c2c2c;--cr2:#000;--v1:#222;--v2:#0d0d0d;--vr:#353535;--vfg:#ddd;--k1:#212121;--k2:#161616;--kh:#3a3a3a;--kr:#080808;--kfg:#f2f2f2;--rfg:#f2f2f2;--sl:#050505;--slr:#2a2a2a;--xh:#d0d0d0;--mlit:#e4e4e4;--mun:#141414;--kn1:#0a0a0a;--kn2:#2b2b2b;--knr:#000;--a1:#262626;--a2:#0e0e0e;--nz:.6}
 html[data-ed=al] .dev{--b1:#d7d8d9;--b2:#bebfc1;--hl:#fff;--ring:#9b9c9e;--sh:#0004;--logo:#4a4b4d;--micbg:#161616;--micr:#b8b9bb;--bxbg:#ff5a1f;--bxfg:#fff;--nbg:transparent;--nfg:#555;--nbd:#8d8e90;--pbg:transparent;--pfg:#333;--pbd:#555;--s1:#cfd0d1;--s2:#a7a8aa;--sring:#8c8d8f;--l1:#eeeeef;--l2:#bdbec0;--lring:#9a9b9d;--lring2:#e9e9ea;--h1:#e2e3e4;--h2:#b3b4b6;--screw1:#aaa;--screw2:#555;--lab:#555;--p1:#d9dadb;--p2:#c3c4c6;--pr1:#a4a5a7;--pr2:#e4e5e6;--pin:#0003;--dg:#2b2b2b;--pt:#3b3b3b;--hub1:#f2f2f3;--hub2:#8d8e90;--hubr:#7d7e80;--hd1:#999;--hd2:#444;--d1:#a5a6a8;--d2:#8b8c8e;--dr:#c4c5c7;--c1:#c7c8ca;--cr1:#8f9092;--cr2:#e6e7e8;--v1:#e4e5e6;--v2:#bcbdbf;--vr:#8d8e90;--vfg:#333;--k1:#d0d1d2;--k2:#bdbec0;--kh:#fff;--kr:#8d8e90;--kfg:#151515;--rfg:#ff5a1f;--sl:#a2a3a5;--slr:#ececed;--xh:#4a4a4a;--mlit:#2b2b2b;--mun:#9d9ea0;--kn1:#9a9b9d;--kn2:#cfd0d2;--knr:#7f8082;--a1:#e8e9ea;--a2:#a0a1a3;--nz:.2}
 html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
@@ -40,15 +47,16 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 .t1,.t2{position:absolute;color:var(--pt);font-size:3.1cqw;white-space:nowrap;transform:translate(-50%,-50%) rotate(45deg)}
 .t1{left:27.7%;top:27.9%}.t2{left:70.7%;top:70.5%}
 #hub{position:absolute;left:36.9%;top:36.9%;width:26.2%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 40% 30%,var(--hub1),var(--hub2));box-shadow:0 0 0 .2cqw var(--hubr),inset 0 .3cqw .8cqw var(--pin);cursor:pointer}
+html[data-ed=al] #hub{background:linear-gradient(135deg,#d9dadc 0 50%,#a3a4a7 50% 100%);box-shadow:0 0 0 .25cqw #8a8b8e,inset 0 0 .7cqw #0003} /* two-tone faceted hub of the aluminum edition */
 #hub i{position:absolute;width:3.8%;aspect-ratio:1;border-radius:50%;background:radial-gradient(var(--hd1),var(--hd2))}
 #dot{left:7.9%;top:66.2%;width:7.7%;aspect-ratio:1;border-radius:50%;border:0;padding:0;cursor:pointer;background:radial-gradient(circle at 40% 35%,var(--d1),var(--d2));box-shadow:0 0 0 .3cqw var(--dr)}
 #dot.pl{box-shadow:0 0 2.4cqw #fff7,0 0 0 .3cqw var(--dr)}#dot.rec{background:radial-gradient(#ff9a70,#ff4f12);box-shadow:0 0 3cqw #ff4f12}#dot.sp{filter:brightness(1.4)}
 .cap{left:87.5%;top:67.1%;width:23%;height:9.5cqw;transform:translate(-50%,-50%) rotate(-45deg);border-radius:5cqw;background:var(--c1);box-shadow:0 0 0 .3cqw var(--cr1),0 0 0 .55cqw var(--cr2)}
 #vp,#vm{width:7.7%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:0;padding:0;background:radial-gradient(var(--v1),var(--v2));box-shadow:0 0 0 .3cqw var(--vr);color:var(--vfg);font-size:4.4cqw;cursor:pointer;display:grid;place-items:center}
 #vp{left:92.1%;top:63.9%}#vm{left:83%;top:70.2%}
-.key{top:75.9%;height:24.1%;border:0;color:var(--kfg);font-size:3.6cqw;background:linear-gradient(var(--k1),var(--k2));box-shadow:0 .2cqw 0 var(--kh) inset,0 0 0 .3cqw var(--kr);cursor:pointer;display:flex;justify-content:center;padding-top:6cqw;border-radius:.6cqw .6cqw 0 0;z-index:1}
+.key{top:75.9%;height:24.1%;border:0;color:var(--kfg);font-size:4.4cqw;background:linear-gradient(var(--k1),var(--k2));box-shadow:0 .2cqw 0 var(--kh) inset,0 0 0 .3cqw var(--kr);cursor:pointer;display:flex;justify-content:center;padding-top:5.4cqw;border-radius:.6cqw .6cqw 0 0;z-index:1}
 .key:active{transform:translateY(.4cqw)}
-#rec{left:0;width:23.8%;border-bottom-left-radius:2.6cqw;color:var(--rfg)}#pp{left:24.9%;width:24%}#stop{left:50%;width:24.2%}
+#rec{left:0;width:23.8%;border-bottom-left-radius:2.6cqw;color:var(--rfg);font-size:8.6cqw;line-height:1;padding-top:3.4cqw}#pp{left:24.9%;width:24%}#stop{left:50%;width:24.2%}
 #rec.on{color:#ff4f12;animation:bl 1s infinite}@keyframes bl{50%{opacity:.5}}
 .slit{top:76.1%;height:20.4%;width:1.3%;background:var(--sl);border-radius:1cqw;box-shadow:0 0 0 .2cqw var(--slr)}
 #mt{left:79%;top:76.1%;width:18%;height:20.4%;pointer-events:none}
@@ -79,8 +87,9 @@ html[data-pg=dark][data-ed=bk] .dev{--ring:#303030}
 <button class="key" id="rec" title="Record from mic">●</button><button class="key" id="pp" title="Play / pause">▶</button><button class="key" id="stop" title="Stop">■</button>
 <i class="slit" style="left:84.9%"></i><i class="slit" style="left:90.8%"></i><canvas id="mt" width="98" height="160"></canvas><i class="xh"></i>
 <div id="knob" title="Volume"></div>
-</div></div>
+</div><figure class="photo" id="photo"><img id="pimg" alt="" draggable="false"><figcaption id="pcap"></figcaption></figure></div>
 <div class="panel">
+<div class="row" id="vw" title="Look at the device from every angle (V)"><button data-v="front" class="on">FRONT</button><button data-v="back">BACK</button><button data-v="top">TOP</button><button data-v="bottom">BTM</button><button data-v="left" title="Side L">SIDE L</button><button data-v="right" title="Side R">SIDE R</button></div>
 <div class="row"><button id="ed">EDITION: BLACK</button><button id="pg">PAGE: LIGHT</button></div>
 <div class="stat"><span id="st">STOP</span><span id="dur">--:--</span><button id="wm" style="height:28px">◎ SEEK</button></div>
 <div class="row"><button id="slow">◀ SLOW</button><button id="rate">1.00×</button><button id="fast">FAST ▶</button><button id="tape" title="Pitch follows speed">TAPE</button></div>
@@ -95,7 +104,15 @@ try{const c=document.createElement('canvas');c.width=c.height=140;const x=c.getC
  for(let i=0;i<im.data.length;i+=4){im.data[i]=im.data[i+1]=im.data[i+2]=255;im.data[i+3]=Math.random()*14}
  x.putImageData(im,0,0);document.documentElement.style.setProperty('--noise','url('+c.toDataURL()+')')}catch(e){}
 const H=document.documentElement;let ed=H.dataset.ed,pg=H.dataset.pg;const C={lit:'#e4e4e4',un:'#141414'};
-function applyTheme(){H.dataset.ed=ed;H.dataset.pg=pg;$('ed').textContent='EDITION: '+(ed==='al'?'ALUMINUM':'BLACK');$('pg').textContent='PAGE: '+pg.toUpperCase();
+// ---- angle viewer: photos of the real unit for the current edition (front = the live, playable device) ----
+let view='front';const VIEWS=['front','back','top','bottom','left','right'],VCAP={back:'BACK',top:'TOP · USB-C · 3 · 2 · 1',bottom:'BOTTOM',left:'SIDE L',right:'SIDE R'};
+function setView(v){view=v;const st=document.querySelector('.stage');
+ document.querySelectorAll('#vw button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+ if(v==='front'){st.classList.remove('vw');return}
+ const im=$('pimg');im.onerror=()=>{$('pcap').textContent='PHOTO FORMAT (AVIF) NOT SUPPORTED HERE'};
+ im.src='img/'+v+'-'+ed+'.avif';im.alt=VCAP[v];$('pcap').textContent=VCAP[v]+' · '+(ed==='al'?'ALUMINUM':'BLACK');st.classList.add('vw')}
+document.querySelectorAll('#vw button').forEach(b=>b.onclick=()=>setView(b.dataset.v));
+function applyTheme(){H.dataset.ed=ed;if(view!=='front')setView(view);H.dataset.pg=pg;$('ed').textContent='EDITION: '+(ed==='al'?'ALUMINUM':'BLACK');$('pg').textContent='PAGE: '+pg.toUpperCase();
  const c=getComputedStyle(document.querySelector('.dev'));C.lit=c.getPropertyValue('--mlit').trim();C.un=c.getPropertyValue('--mun').trim();
  try{localStorage.setItem('tp7.theme',JSON.stringify({ed,pg}))}catch(_){}}
 let tracks=[],cur=-1,mode='b',A=null,ctx=null,an=null,gn=null,dry=null,wet=null,wk=null,wkP=null,fake=false;
@@ -154,8 +171,9 @@ function ensureCtx(){if(ctx)return;
 const E={buf:null,rb:null,src:null,on:false,pos:0,t0:0,p0:0,s0:1,d0:1,ov:null,ovWas:false,gen:0};
 const dur=()=>E.buf?E.buf.duration:0;
 function Tb(){if(!E.on||!ctx)return E.pos;return Math.min(Math.max(E.p0+E.d0*(ctx.currentTime-E.t0)*E.s0,0),dur())}
+let scratching=false; // true while the platter is being scratched: pitch must follow speed like a real record
 function plan(){let s,d;if(E.ov!=null){s=Math.abs(E.ov);d=E.ov<0?-1:1}else{s=speed;d=rev?-1:1}
- s=clampS(s);const p=(tape?s:1)*pr();return{s,d,q:Math.min(1e6,Math.max(1e-6,p/s))}}
+ s=clampS(s);const p=(tape||scratching?s:1)*pr();return{s,d,q:Math.min(1e6,Math.max(1e-6,p/s))}}
 // The worklet only gets pulled by the audio thread while it is connected to the output, so connect it just while a shift is needed.
 let wkOn=false,wkT=0;
 function wkSet(on){if(!wk)return;clearTimeout(wkT);
@@ -245,7 +263,7 @@ async function load(i,autoplay=true){
  if(g!==LG)return;
  if(ab&&ab.byteLength<MAXDEC){
   try{await wkP;const b=await ctx.decodeAudioData(ab);if(g!==LG)return;
-   mode='b';fake=false;E.buf=b;E.rb=null;E.pos=0;msg('');$('dur').textContent=fmt(b.duration);replan();
+   mode='b';fake=false;E.buf=b;E.rb=null;E.pos=0;msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
    if(autoplay)play();return}catch(e){}}
  if(g!==LG)return;
  fallback(t,i,autoplay,g)}
@@ -330,30 +348,41 @@ $('rec').onclick=async()=>{
   mr.start();$('rec').classList.add('on');if(playing())toggle()}catch(e){msg('Microphone access denied.')}};
 $('pp').onclick=toggle;$('prev').onclick=()=>T()>3?seek(0):step(-1);$('next').onclick=()=>step(1);
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();toggle()}
- if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();if(e.key.toLowerCase()==='l')$('lm').click();
+ if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();if(e.key.toLowerCase()==='l')$('lm').click();if(e.key.toLowerCase()==='v')setView(VIEWS[(VIEWS.indexOf(view)+1)%VIEWS.length]);
  if(e.code==='ArrowRight')seek(T()+5);if(e.code==='ArrowLeft')seek(T()-5)});
 
 // wheel: drag to scrub, spins when playing
 const W=$('wheel');let drag=false,last=0;
 const pa=e=>{const r=W.getBoundingClientRect();return Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2)*180/Math.PI};
 let wm='seek',off=0,acc=1,moved=false,downOnHub=false;
-function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed')}
-$('wm').onclick=()=>setWm(wm==='seek'?'speed':'seek');
+// SCRATCH: the platter behaves like a turntable. Touching it holds the record, moving it moves the audio position
+// (200 deg of platter = 1 s of audio, i.e. 33 1/3 rpm), pitch follows speed, backwards = reversed audio. Letting go resumes playback.
+const WMS=['seek','speed','scratch'],SCR=200;let sc=false,scrA=0,scrA0=0,scrP=0;
+function prepScratch(){ // build the reversed copy up front so the first backwards scratch doesn't stall
+ if(mode!=='b'){msg('Scratching needs a downloaded file, not a stream');return}
+ if(E.buf&&!E.rb)setTimeout(()=>{try{if(E.buf)rbuf()}catch(e){}},60)}
+function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch')prepScratch()}
+$('wm').onclick=()=>setWm(WMS[(WMS.indexOf(wm)+1)%WMS.length]);
+try{const v=localStorage.getItem('tp7.wm');if(WMS.includes(v))setWm(v)}catch(e){}
 addEventListener('keydown',e=>{if(e.target.tagName!=='INPUT'&&e.key.toLowerCase()==='m')$('wm').click()});
 let vs=0,lastMv=0;
-const wheelBy=d=>{if(wm==='seek'){if(!(tape&&mode==='b'))seek(T()+d/12)}else{off+=d;acc=clampS(acc*Math.pow(2,d/360));setSpeed(acc)}};
-W.onpointerdown=e=>{drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing'};
-W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;wheelBy(d)};
-W.onpointerup=()=>{if(drag&&!moved&&downOnHub)$('wm').click();drag=false;W.style.cursor='grab'};
-W.onwheel=e=>{e.preventDefault();if(wm==='seek')seek(T()+e.deltaY/40);else{acc=speed;nudge(e.deltaY<0?1:-1);off-=e.deltaY/4}};
+const wheelBy=d=>{if(wm!=='speed'){if(!(tape&&mode==='b'))seek(T()+d/12)}else{off+=d;acc=clampS(acc*Math.pow(2,d/360));setSpeed(acc)}};
+W.onpointerdown=e=>{drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
+ sc=wm==='scratch'&&mode==='b'&&!!E.buf;if(sc){scrP=T();scrA=scrA0=T()*30+off}};
+W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;if(sc)scrA+=d;else wheelBy(d)};
+W.onpointerup=W.onpointercancel=()=>{if(drag&&!moved&&downOnHub)$('wm').click();if(sc){off=scrA-T()*30;sc=false}drag=false;W.style.cursor='grab'};
+W.onwheel=e=>{e.preventDefault();if(wm!=='speed')seek(T()+e.deltaY/40);else{acc=speed;nudge(e.deltaY<0?1:-1);off-=e.deltaY/4}};
 
 // shuttle / tape varispeed: in TAPE mode the wheel scrub sets the tape rate (30deg/s = 1x, backwards = reverse audio);
 // the lever always shuttles audibly (up = forward up to 16x speed, down = reverse up to 16x)
 (function tk(n){
  const scrub=drag&&wm==='seek';if(scrub&&n-lastMv>70)vs*=.75;
+ const scr=drag&&sc&&mode==='b'&&!!E.buf&&(!downOnHub||moved);scratching=scr; // a tap on the hub only switches mode, it doesn't stop the music
  if(mode==='b'&&E.buf){
   let r=null;
-  if(scrub&&tape){r=vs/30;if(Math.abs(r)<.03)r=0}
+  if(scr){ // chase the position the finger points at (time constant 60 ms): locks audio to the platter, holds still when you hold still
+   const tgt=Math.min(Math.max(scrP+(scrA-scrA0)/SCR,0),dur());r=Math.max(-16,Math.min(16,(tgt-Tb())/.06));if(Math.abs(r)<.04)r=0}
+  else if(scrub&&tape){r=vs/30;if(Math.abs(r)<.03)r=0}
   else if(Math.abs(lp)>.06)r=lp<0?speed*Math.pow(2,-lp*4):-Math.pow(2,lp*4); // bar tilted toward R (lp>0) = rewind, toward ▲▲ (lp<0) = fast-forward
   setOv(r)}
  else if(mode==='e'&&lp){const dt=Math.min(.1,(n-lt0)/1000);lacc-=lp*dt*8;if(Math.abs(lacc)>.05){seek(T()+lacc);lacc=0}}
@@ -368,7 +397,7 @@ const eTm=$('tm'),eDur=$('dur'),eSt=$('st'),ePp=$('pp'),eRot=$('rot'),eDot=$('do
  txt(eTm,Math.floor(t/3600)+'.'+String(Math.floor(t/60)%60).padStart(2,'0')+'.'+String(Math.floor(t%60)).padStart(2,'0'));
  if(d)txt(eDur,fmt(d));
  txt(eSt,mr?'REC':p?(E.d0<0&&mode==='b'?'REV':'PLAY'):cur<0?'STOP':'PAUSE');txt(ePp,playing()?'❚❚':'▶');
- const a=Math.round(((t*30+off)%360)*10)/10;if(a!==rd){rd=a;eRot.style.transform='rotate('+a+'deg)'}
+ const a=Math.round((((sc&&drag)?scrA:t*30+off)%360)*10)/10;if(a!==rd){rd=a;eRot.style.transform='rotate('+a+'deg)'} // while scratching the platter follows the finger exactly
  eDot.classList.toggle('pl',p);eDot.classList.toggle('rec',!!mr);
  let v=0;if(p){if(an&&!fake){an.getByteTimeDomainData(buf);let m=0;for(const b of buf)m=Math.max(m,Math.abs(b-128));v=m/128}else v=.25+.35*Math.abs(Math.sin(t*7.3)*Math.sin(t*2.1))}
  lvl+=(v-lvl)*.3;
