@@ -159,7 +159,7 @@ process(ins,outs,pr){const i=ins[0],o=outs[0];if(!o||!o[0])return true;const r=p
 registerProcessor('tp7-shift',S)`;
 
 function ensureCtx(){if(ctx)return;
- ctx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:'interactive'});an=ctx.createAnalyser();an.fftSize=256;gn=ctx.createGain();gn.gain.value=vol;
+ ctx=new(window.AudioContext||window.webkitAudioContext)({latencyHint:MOBILE?'playback':'interactive'});an=ctx.createAnalyser();an.fftSize=256;gn=ctx.createGain();gn.gain.value=vol;
  dry=ctx.createGain();wet=ctx.createGain();wet.gain.value=0;dry.connect(an);wet.connect(an);an.connect(gn);gn.connect(ctx.destination);
  wkP=(ctx.audioWorklet?ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([WK],{type:'text/javascript'}))).then(()=>{
    wk=new AudioWorkletNode(ctx,'tp7-shift',{outputChannelCount:[2],channelCount:2,channelCountMode:'explicit'})}):Promise.reject()
@@ -226,11 +226,12 @@ function setOv(v){
  if(!E.on){if(ctx.state==='suspended')ctx.resume();E.on=true;startSrc()}else replan()}
 
 // ---------- controls ----------
-function applySpeed(){showRate(mode==='e'?Math.min(ASMAX,Math.max(ASMIN,speed)):speed);
+function needEngine(){if(lite||freed){clearTimeout(rt);restore()}}
+function applySpeed(){if(mode==='e'&&(speed>ASMAX||speed<ASMIN))needEngine();showRate(mode==='e'?Math.min(ASMAX,Math.max(ASMIN,speed)):speed);
  if(mode==='e'&&A){A.defaultPlaybackRate=A.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(A)}else replan()}
 const pitchMode=a=>{a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=!tape};
 function setSpeed(v){speed=Math.round(clampS(v)*1e4)/1e4;applySpeed()}
-function setPitch(v){pst=Math.round(Math.min(PMAX,Math.max(-PMAX,v))*100)/100;showPitch();replan()}
+function setPitch(v){pst=Math.round(Math.min(PMAX,Math.max(-PMAX,v))*100)/100;showPitch();if(pst)needEngine();replan()}
 function nudge(d){setSpeed(speed*Math.pow(2,d/12))}
 function hold(id,fn){const b=$(id);let to,iv;const stop=()=>{clearTimeout(to);clearInterval(iv)};
  b.onpointerdown=()=>{fn();to=setTimeout(()=>{iv=setInterval(fn,110)},350)};
@@ -238,6 +239,7 @@ function hold(id,fn){const b=$(id);let to,iv;const stop=()=>{clearTimeout(to);cl
 hold('slow',()=>nudge(-1));hold('fast',()=>nudge(1));hold('pdn',()=>setPitch(pst-1));hold('pup',()=>setPitch(pst+1));
 $('rate').onclick=()=>setSpeed(1);$('pitch').onclick=()=>setPitch(0);
 function setRev(v){rev=v;$('rev').classList.toggle('on',rev);
+ if(v&&(lite||freed)){bgRev=true;needEngine();return flash('LOADING')} // reverse needs the full engine: it is coming back, REV applies when it is ready
  if(mode==='e'&&rev){rev=false;$('rev').classList.remove('on');msg('Reverse needs the full-quality engine; this track is streaming.');return}
  if(mode==='b'&&E.on&&rev&&Tb()<=.05)E.pos=dur();replan();flash(rev?'REVERSE':'FORWARD')}
 $('rev').onclick=()=>setRev(!rev);
@@ -260,7 +262,7 @@ lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='tra
 $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpeed();msg(tape?'Tape mode: pitch follows speed; scrub the wheel to hear it forwards and backwards.':'')};
 
 // ---------- loading ----------
-function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
+function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;dropStandby();E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
 // decoded audio is ~20x the file size in RAM, so phones get a much lower ceiling (bigger files stream through <audio> instead of being decoded)
 const MOBILE=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!(navigator.deviceMemory&&navigator.deviceMemory<=4);
 let LG=0;const MAXDEC=MOBILE?10e6:40e6;
@@ -295,6 +297,7 @@ async function load(i,autoplay=true){
  if(b&&MOBILE&&document.hidden)return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1}); // the page was hidden while this was decoding: don't keep the big buffer
  if(b){
   mode='b';fake=false;E.buf=b;E.dd=b.duration;E.rb=null;E.rw=null;E.pos=0;{const at=takeResume(t);if(at)E.pos=Math.min(at,b.duration-.05)}msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
+  if(MOBILE)standby(t);
   if(autoplay)play();return}
  fallback(t,i,autoplay,g)}
 // plain <audio> element. Used when a file can't be fetched/decoded or is too big to hold in memory (speed limited to 0.06-16x, no reverse),
@@ -403,7 +406,7 @@ try{const v=localStorage.getItem('tp7.wm');if(WMS.includes(v))setWm(v)}catch(e){
 addEventListener('keydown',e=>{if(e.target.tagName!=='INPUT'&&e.key.toLowerCase()==='m')$('wm').click()});
 let vs=0,lastMv=0;
 const wheelBy=d=>{if(wm!=='speed'){if(!(tape&&mode==='b'))seek(T()+d/12)}else{off+=d;acc=clampS(acc*Math.pow(2,d/360));setSpeed(acc)}};
-W.onpointerdown=e=>{wRect=null;drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
+W.onpointerdown=e=>{if(wm==='scratch')needEngine();wRect=null;drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
  sc=wm==='scratch'&&mode==='b'&&!!E.buf;if(sc){scrP=T();scrA=scrA0=T()*30+off}};
 W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;if(sc)scrA+=d;else wheelBy(d)};
 W.onpointerup=W.onpointercancel=()=>{if(drag&&!moved&&downOnHub)$('wm').click();if(sc){off=scrA-T()*30;sc=false}drag=false;W.style.cursor='grab'};
@@ -473,15 +476,43 @@ addEventListener('pagehide',saveLast);
 // Android kills the biggest background app first when another app needs RAM, and the decoded audio (tens to hundreds of MB) is by far the
 // biggest thing this page holds. So on phones it is dropped the moment the page is hidden: playback carries on through a plain <audio>
 // element (it streams from the file, a few MB) and the full engine (reverse, pitch, scratch, >16x) is rebuilt when you come back.
-function goLite(){
- if(!MOBILE||mode!=='b'||!E.buf||cur<0||!tracks[cur])return;
- const t=tracks[cur],was=E.on,p=Tb();
+// The <audio> element is brought up *first*, in sync and silent, and only then does the engine stop and the element become audible, so
+// there is no gap. It is warmed as soon as the app starts to leave (activity paused / window blur), before the page is even hidden.
+const HO=.12;let S=null,pend=null,rt=0; // S: standby <audio> for the current track; pend: handover in progress; rt: timer for the delayed return to the full engine
+function dropStandby(){cancelWarm();if(S){try{S.pause();S.removeAttribute('src');S.load()}catch(e){}S=null}}
+function standby(t){if(S&&S._t===t)return S;dropStandby();const a=new Audio();a._t=t;a.preload='metadata';a.src=t.src;S=a;return a}
+function cancelWarm(){if(pend){clearTimeout(pend.to);try{pend.a.pause()}catch(e){}pend=null}}
+function prewarm(){if(!MOBILE||pend||mode!=='b'||!E.on||E.d0<0||E.ov!=null||!E.buf||cur<0||!tracks[cur])return;
+ const t=tracks[cur],a=standby(t),p=Tb();a.volume=0;a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,E.s0||speed));pitchMode(a);
+ const go=()=>{try{a.currentTime=Math.min(p+HO,Math.max(0,dur()-.2))}catch(e){}a.play().catch(()=>{})};
+ a.readyState>=1?go():a.addEventListener('loadedmetadata',go,{once:true});pend={a,t}}
+function closeCtx(){try{ctx&&ctx.close()}catch(e){}ctx=an=gn=dry=wet=wk=wkP=null;wkOn=false} // nothing needs it while in the background
+function commit(a){const t=tracks[cur],pe=Tb();clearTimeout(pend&&pend.to);
+ E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false;
+ pause();E.pos=pe;saveLast();E.buf=null;E.rb=null;E.rw=null;rbJob++;
+ if(Math.abs(a.currentTime-pe)>.25){try{a.currentTime=pe}catch(e){}} // only if the warm-up drifted
+ S=null;pend=null;++LG;mode='e';A=a;lite=true;freed=false;fake=true;a.volume=vol;a.onended=auto;a.onerror=()=>{if(A===a)msg('Could not load that audio.')};
+ a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);
+ if(rev){bgRev=true;rev=false;$('rev').classList.remove('on')}
+ bypass();closeCtx()}
+function dropNow(){ // no warm element available (reverse, shuttle, slow start): stop the engine and carry on through a fresh element
+ const t=tracks[cur],was=E.on,p=Tb();cancelWarm();
  if(!was&&E.buf.length*E.buf.numberOfChannels<4e6)return; // paused and tiny: not worth it
- E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false; // a touch in progress can't finish while hidden
- pause();E.pos=p;saveLast();E.buf=null;E.rb=null;E.rw=null;rbJob++;
+ E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false;
+ pause();E.pos=p;saveLast();E.buf=null;E.rb=null;E.rw=null;rbJob++;dropStandby();
  if(was)fallback(t,cur,true,++LG,{at:p,lite:1});
  else{freed=true;resume={k:tkey(t),t:p}} // paused: nothing to play, just free it (play from the notification reloads it)
- try{ctx&&ctx.suspend()}catch(e){}}
+ closeCtx()}
+function goLite(){
+ if(!MOBILE||mode!=='b'||!E.buf||cur<0||!tracks[cur])return;
+ const t=tracks[cur];
+ if(E.on&&E.d0>0&&E.ov==null){
+  prewarm();const w=pend;if(!w)return dropNow();
+  const done=()=>{if(pend!==w||!document.hidden||mode!=='b'||cur<0||tracks[cur]!==t)return;if(E.on)commit(w.a);else dropNow()};
+  if(w.a.readyState>=3&&!w.a.paused&&w.a.currentTime>0)done();
+  else{w.a.addEventListener('playing',done,{once:true});w.to=setTimeout(()=>{if(pend===w&&document.hidden)dropNow()},2500)}
+  return}
+ dropNow()}
 // back in the foreground: decode again and swap the full engine back in at the current position
 async function restore(){
  const t=tracks[cur];if(!t||!(lite||freed))return;
@@ -497,12 +528,14 @@ async function restore(){
  else p=E.pos;
  lite=freed=false;mode='b';fake=false;E.buf=b;E.dd=b.duration;E.rb=null;E.rw=null;E.on=false;E.pos=Math.max(0,Math.min(p,b.duration-.05));
  $('dur').textContent=fmt(b.duration);showRate(speed);if(bgRev){bgRev=false;setRev(true)}replan();if(wm==='scratch')prepScratch();
- if(was)play()}
+ if(MOBILE)standby(t);if(was)play()}
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){saveLast();RG++;E.rb=null;E.rw=null;rbJob++;goLite();return} // the reversed copy is always dropped (rebuilt on demand)
+ if(document.hidden){saveLast();RG++;clearTimeout(rt);E.rb=null;E.rw=null;rbJob++;goLite();return}
+ cancelWarm(); // the reversed copy is always dropped (rebuilt on demand)
  if(ctx&&ctx.state==='closed'){const k=tkey(tracks[cur]),t=E.pos;ctx=an=gn=dry=wet=wk=wkP=null;E.on=false;lite=freed=false;if(k){resume={k,t};if(cur>=0)load(cur,false)}return}
  if(ctx&&ctx.state!=='running')ctx.resume().catch(()=>{});
- if(lite||freed)restore()});
+ if(lite||freed){clearTimeout(rt);rt=setTimeout(()=>{if(!document.hidden)restore()},1500)}}); // not straight away: decoding right when you switch back is what makes the UI stutter
+if(MOBILE){addEventListener('blur',prewarm);document.addEventListener('pause',prewarm);const un=()=>{if(!document.hidden)cancelWarm()};addEventListener('focus',un);document.addEventListener('resume',un)}
 addEventListener('freeze',saveLast);
 
 // ---- notification / lock-screen controls ----
