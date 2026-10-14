@@ -2,19 +2,6 @@
 
 Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 
-    tp7/
-      public/index.html   the site
-      src/worker.js       /api/proxy?url=...  (CORS-free audio relay, SSRF-guarded)
-      wrangler.jsonc
-
-## Deploy
-    npm i -g wrangler        # or use npx
-    wrangler login
-    wrangler deploy          # run from this folder
-
-## Local dev
-    wrangler dev
-
 ## Notes
 - Playback tries: direct URL -> /api/proxy -> direct without meter.
 - The proxy only returns audio/video content types, blocks private IPs, and only
@@ -44,14 +31,7 @@ Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 ## Offline apps (Windows / Android)
 Local files and recordings are stored in the browser/app (IndexedDB), so the library works with no internet (remote links obviously need a connection).
 
-- **Install from the site (PWA, Android/Chrome/Edge/desktop):** the INSTALL button on the page. It caches itself and works offline.
-- **Windows .exe:** `npm install && npm run app` to run, `npm run dist:win` to build `tp7-setup.exe` + `tp7-portable.exe` in dist/.
-  A ready-to-run folder (`TP-7.exe`) is in the separate apps zip.
-- **Android APK:** needs the Android SDK, so build it in CI: push this folder to GitHub and run the "build-apps" workflow
-  (Actions tab > Run workflow) to get `tp7.apk` (debug-signed; allow "install unknown apps"). Every successful run also publishes
-  tp7-setup.exe / tp7-portable.exe / tp7.apk on the Releases page (a manual run makes a pre-release named `build-N`; pushing a tag like
-  `v1.1` makes a normal release). If one platform fails, the other is still published, and a failed Android run uploads
-  an `android-build-reports` artifact with the Gradle reports.
+- **Install web app (PWA, Android/Chrome/Edge/desktop):** the INSTALL button on the page. It caches itself and works offline.
 - **Download buttons on the site:** put the release URLs in `const DL={win:'',apk:''}` near the bottom of public/index.html
   (e.g. https://github.com/YOU/REPO/releases/latest/download/tp7.apk), or drop `tp7.apk` / `tp7-windows.zip` into public/downloads/
   (each file must be under Cloudflare's 25 MB asset limit). The buttons only appear when a file exists.
