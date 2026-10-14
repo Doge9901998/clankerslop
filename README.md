@@ -2,6 +2,19 @@
 
 Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 
+    tp7/
+      public/index.html   the site
+      src/worker.js       /api/proxy?url=...  (CORS-free audio relay, SSRF-guarded)
+      wrangler.jsonc
+
+## Deploy
+    npm i -g wrangler        # or use npx
+    wrangler login
+    wrangler deploy          # run from this folder
+
+## Local dev
+    wrangler dev
+
 ## Notes
 - Playback tries: direct URL -> /api/proxy -> direct without meter.
 - The proxy only returns audio/video content types, blocks private IPs, and only
@@ -16,6 +29,7 @@ Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 - **LOOP** button (or L key) cycles LOOP: OFF (play the list once) -> LOOP: ALL (wrap around) -> LOOP: ONE (repeat the current track) -> SHUFFLE (random order, no repeats until every track has played; PREV steps back through what was played). NEXT/PREV still skip tracks in LOOP: ONE. The choice is remembered.
 - **SCRATCH**: the ◎ button under the OLED (or the M key / tapping the hub) cycles the wheel through SEEK -> SPEED -> SCRATCH. In SCRATCH the platter works like a turntable: touch it and the record is held, move it and the audio moves with your finger (200 degrees of platter = 1 second of audio, i.e. 33 1/3 rpm), pitch follows speed, backwards gives reversed audio, and letting go resumes playback (or leaves it paused if it was paused). It needs a downloaded/decoded file, not a stream. The mode is remembered.
 - **Background playback, memory and the notification.** Decoded audio is big (a 10 MB MP3 is 200+ MB in RAM) and Android kills the biggest background app first, so on phones:
+  - **light by default on phones:** plain listening streams through an `<audio>` element that is routed through the same Web Audio graph, so the live meters, speed (the browser's own time-stretch) and the semitone pitch shifter all work, but nothing big is held in RAM (a few MB instead of 74-230 MB per track). The decoded engine is built only when a feature needs it: REV, SCRATCH mode, wheel scrubbing in TAPE mode, the lever, or a speed beyond 16x / below 0.06x. It is freed again when you pause for ~20 s, and the next track starts light again;
   - the switch to background playback is gapless: as soon as the app starts to leave (activity paused / window blur) a silent `<audio>` element is started in sync, and only when it is running does the engine stop and the element become audible. The full engine is rebuilt about 1.5 s after you come back (or immediately if you press REV / PITCH / touch the platter in SCRATCH), not right away, so switching back doesn't stutter;
   - on phones the audio context uses a larger buffer (fewer glitches while other apps are busy);
   - the moment the page is hidden the decoded copy is dropped and playback continues through a plain `<audio>` element (a few MB). When you come back the full engine is rebuilt at the current position and swapped in, so reverse / pitch / scratch / >16x are back. While in the background the element limits speed to 0.06-16x and has no reverse or semitone pitch (REV is restored when you return);
@@ -30,8 +44,14 @@ Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 ## Offline apps (Windows / Android)
 Local files and recordings are stored in the browser/app (IndexedDB), so the library works with no internet (remote links obviously need a connection).
 
-- **Install as web app (PWA, Android/Chrome/Edge/desktop):** the INSTALL button on the page. It caches itself and works offline.
-
+- **Install from the site (PWA, Android/Chrome/Edge/desktop):** the INSTALL button on the page. It caches itself and works offline.
+- **Windows .exe:** `npm install && npm run app` to run, `npm run dist:win` to build `tp7-setup.exe` + `tp7-portable.exe` in dist/.
+  A ready-to-run folder (`TP-7.exe`) is in the separate apps zip.
+- **Android APK:** needs the Android SDK, so build it in CI: push this folder to GitHub and run the "build-apps" workflow
+  (Actions tab > Run workflow) to get `tp7.apk` (debug-signed; allow "install unknown apps"). Every successful run also publishes
+  tp7-setup.exe / tp7-portable.exe / tp7.apk on the Releases page (a manual run makes a pre-release named `build-N`; pushing a tag like
+  `v1.1` makes a normal release). If one platform fails, the other is still published, and a failed Android run uploads
+  an `android-build-reports` artifact with the Gradle reports.
 - **Download buttons on the site:** put the release URLs in `const DL={win:'',apk:''}` near the bottom of public/index.html
   (e.g. https://github.com/YOU/REPO/releases/latest/download/tp7.apk), or drop `tp7.apk` / `tp7-windows.zip` into public/downloads/
   (each file must be under Cloudflare's 25 MB asset limit). The buttons only appear when a file exists.

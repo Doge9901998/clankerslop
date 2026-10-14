@@ -147,13 +147,13 @@ function showPitch(){$('pitch').textContent=(pst>=0?'+':'')+(+pst.toFixed(2))+' 
 const WK=`class S extends AudioWorkletProcessor{
 static get parameterDescriptors(){return[{name:'r',defaultValue:1,minValue:1e-9,maxValue:1e9,automationRate:'k-rate'}]}
 constructor(){super();this.port.onmessage=()=>{this.b[0].fill(0);this.b[1].fill(0)};this.N=16384;this.b=[new Float32Array(this.N),new Float32Array(this.N)];this.w=0;this.ph=0;this.W=Math.max(512,Math.round(sampleRate*.06))}
-process(ins,outs,pr){const i=ins[0],o=outs[0];if(!o||!o[0])return true;const r=pr.r[0],N=this.N,M=N-1,W=this.W,b=this.b,n=o[0].length;
- const L=i&&i[0]||null,R=i&&i[1]||L,inc=(1-r)/W;let w=this.w,ph=this.ph;
- const rd=(a,p)=>{const f=Math.floor(p),x=p-f,k=f&M;return a[k]*(1-x)+a[(k+1)&M]*x};
- for(let k=0;k<n;k++){b[0][w]=L?L[k]:0;b[1][w]=R?R[k]:0;
+process(ins,outs,pr){const i=ins[0],o=outs[0];if(!o||!o[0])return true;const r=pr.r[0],N=this.N,M=N-1,W=this.W,b0=this.b[0],b1=this.b[1],n=o[0].length;
+ const L=i&&i[0]||null,R=i&&i[1]||L,inc=(1-r)/W,o0=o[0],o1=o.length>1?o[1]:null;let w=this.w,ph=this.ph;
+ for(let k=0;k<n;k++){b0[w]=L?L[k]:0;b1[w]=R?R[k]:0;
   const g2=.5+.5*Math.cos(6.283185307*ph),g1=1-g2;let q=ph+.5;if(q>=1)q-=1;
-  const d1=ph*W+1,d2=q*W+1;
-  for(let c=0;c<o.length&&c<2;c++)o[c][k]=g1*rd(b[c],w-d1)+g2*rd(b[c],w-d2);
+  const p1=w-(ph*W+1),p2=w-(q*W+1),f1=Math.floor(p1),x1=p1-f1,a1=f1&M,c1=(a1+1)&M,f2=Math.floor(p2),x2=p2-f2,a2=f2&M,c2=(a2+1)&M;
+  o0[k]=g1*(b0[a1]*(1-x1)+b0[c1]*x1)+g2*(b0[a2]*(1-x2)+b0[c2]*x2);
+  if(o1)o1[k]=g1*(b1[a1]*(1-x1)+b1[c1]*x1)+g2*(b1[a2]*(1-x2)+b1[c2]*x2);
   ph+=inc;ph-=Math.floor(ph);w=(w+1)&M}
  this.w=w;this.ph=ph;return true}}
 registerProcessor('tp7-shift',S)`;
@@ -231,7 +231,7 @@ function applySpeed(){if(mode==='e'&&(speed>ASMAX||speed<ASMIN))needEngine();sho
  if(mode==='e'&&A){A.defaultPlaybackRate=A.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(A)}else replan()}
 const pitchMode=a=>{a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=!tape};
 function setSpeed(v){speed=Math.round(clampS(v)*1e4)/1e4;applySpeed()}
-function setPitch(v){pst=Math.round(Math.min(PMAX,Math.max(-PMAX,v))*100)/100;showPitch();if(pst)needEngine();replan()}
+function setPitch(v){pst=Math.round(Math.min(PMAX,Math.max(-PMAX,v))*100)/100;showPitch();if(mode==='e')eShift();else replan()}
 function nudge(d){setSpeed(speed*Math.pow(2,d/12))}
 function hold(id,fn){const b=$(id);let to,iv;const stop=()=>{clearTimeout(to);clearInterval(iv)};
  b.onpointerdown=()=>{fn();to=setTimeout(()=>{iv=setInterval(fn,110)},350)};
@@ -256,18 +256,23 @@ kb.addEventListener('wheel',e=>{e.preventDefault();setVol(vol-e.deltaY/1500)},{p
 // transport lever: push up = fast forward, down = rewind (audible, incl. reverse), springs back
 const lev=$('lev'),lt=$('lt');let lp=0,lacc=0,lt0=performance.now(),ld=false,ly=0,ltR=null;
 // lever rocks about its centre pivot: drag the grip down (rewind pose) or up (fast-forward pose); tilt the bar so its top end swings toward ▲▲ = fast forward, bottom end toward R = rewind; springs back to centre on release
-lev.onpointerdown=e=>{ld=true;ly=e.clientY;ltR=lt.getBoundingClientRect();lev.setPointerCapture(e.pointerId);lev.style.transition='none'};
+lev.onpointerdown=e=>{needEngine();ld=true;ly=e.clientY;ltR=lt.getBoundingClientRect();lev.setPointerCapture(e.pointerId);lev.style.transition='none'};
 lev.onpointermove=e=>{if(!ld)return;const r=ltR||(ltR=lt.getBoundingClientRect());lp=Math.max(-1,Math.min(1,(e.clientY-ly)/(r.height*.28)));lev.style.transform='rotate('+(-lp*7)+'deg)'};
 lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='transform .28s cubic-bezier(.3,1.7,.5,1)';lev.style.transform='rotate(0deg)'};
 $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpeed();msg(tape?'Tape mode: pitch follows speed; scrub the wheel to hear it forwards and backwards.':'')};
 
 // ---------- loading ----------
-function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;dropStandby();E.ov=null;E.pos=0;if(A){A.pause();A.src=''}A=null}
+function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;dropStandby();E.ov=null;E.pos=0;clearTimeout(eskT);eskT=null;killEl(A);A=null}
 // decoded audio is ~20x the file size in RAM, so phones get a much lower ceiling (bigger files stream through <audio> instead of being decoded)
 const MOBILE=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!(navigator.deviceMemory&&navigator.deviceMemory<=4);
 let LG=0;const MAXDEC=MOBILE?10e6:40e6;
 // phones also get a budget for the *decoded* size (a low-bitrate MP3 can be tiny on disk and still unpack to hundreds of MB)
 const DECMAX=MOBILE?Math.min(160,Math.max(60,(navigator.deviceMemory||4)*32))*1e6:1e12;
+// Light mode (phones): plain listening streams through an <audio> element on the Web Audio graph (a few MB; live meter, speed, semitone pitch).
+// The decoded engine (74-230 MB) is only built when a feature needs it: reverse, scratch, tape-scrub, lever, speeds beyond what <audio> can do.
+const wantEngine=()=>rev||bgRev||wm==='scratch'||speed>ASMAX||speed<ASMIN;
+function killEl(a){if(!a)return;try{a.onended=a.onerror=null;a.pause();a._ms&&a._ms.disconnect();a.removeAttribute('src');a.load()}catch(e){}}
+const eShift=()=>{if(!wk||!ctx||mode!=='e'||!A||!A._ms)return;if(!A._wk){try{A._ms.connect(wk);A._wk=1}catch(e){}}shift(pr())}; // connected lazily: the shifter module may still be loading when the element starts // <audio> already plays at the right speed: the shifter only adds the semitones
 let lite=false,freed=false,bgRev=false,RG=0; // lite: playing through <audio> only because the page is in the background; freed: decoded copy dropped while paused in the background
 function probe(u){return new Promise(r=>{const a=new Audio();let done=0;const to=setTimeout(()=>f(0),3000);
  const f=v=>{if(done)return;done=1;clearTimeout(to);a.onloadedmetadata=a.onerror=null;try{a.removeAttribute('src');a.load()}catch(e){}r(v)};
@@ -291,20 +296,21 @@ async function load(i,autoplay=true){
  $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';mark();
  if(MOBILE&&document.hidden)return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1}); // in the background: stream through <audio>, decode properly when the page comes back
  try{ensureCtx();if(ctx.state==='suspended')ctx.resume()}catch(e){return msg('Web Audio is not available in this browser.')}
+ if(MOBILE&&!wantEngine())return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1,vis:1}); // light: stream, decode only if a feature needs it
  msg('Loading…');
  const b=await getBuf(t,g);
  if(g!==LG)return;
  if(b&&MOBILE&&document.hidden)return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1}); // the page was hidden while this was decoding: don't keep the big buffer
  if(b){
   mode='b';fake=false;E.buf=b;E.dd=b.duration;E.rb=null;E.rw=null;E.pos=0;{const at=takeResume(t);if(at)E.pos=Math.min(at,b.duration-.05)}msg('');$('dur').textContent=fmt(b.duration);replan();if(wm==='scratch')prepScratch();
-  if(MOBILE)standby(t);
   if(autoplay)play();return}
  fallback(t,i,autoplay,g)}
 // plain <audio> element. Used when a file can't be fetched/decoded or is too big to hold in memory (speed limited to 0.06-16x, no reverse),
 // and (o.lite) for playback while the page is in the background, where it only costs a few MB and lets the OS show its media notification.
 // o.at = start position in seconds.
 function fallback(t,i,autoplay,g,o){o=o||{};mode='e';E.buf=null;lite=!!o.lite;freed=false;
- if(o.lite){msg('');if(rev){bgRev=true;rev=false;$('rev').classList.remove('on')}}
+ if(o.vis)msg('');
+ else if(o.lite){msg('');if(rev){bgRev=true;rev=false;$('rev').classList.remove('on')}}
  else{msg(STREAMMSG);if(rev)setRev(false)}
  const go=a=>{const run=()=>{if(autoplay)a.play().catch(()=>msg('Press play to start.'))};
   if(o.at>.05){const f=()=>{try{a.currentTime=o.at}catch(e){}run()};a.readyState>=1?f():a.addEventListener('loadedmetadata',f,{once:true})}else run()};
@@ -312,19 +318,20 @@ function fallback(t,i,autoplay,g,o){o=o||{};mode='e';E.buf=null;lite=!!o.lite;fr
  const attempt=stage=>{
   const a=new Audio(),src=stage===1?'/api/proxy?url='+encodeURIComponent(t.src):t.src;
   if(stage<2&&!t.blob)a.crossOrigin='anonymous';a.src=src;a.preload='auto';a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);a.onended=auto;
-  A=a;a.onerror=()=>{if(A!==a)return;if(!t.blob&&stage<2)attempt(stage+1);else msg('Could not load that audio.')};
-  if(stage===2){fake=true;a.volume=vol}else{try{ctx.createMediaElementSource(a).connect(dry);bypass();a.volume=1;fake=false}catch(e){fake=true;a.volume=vol}}
+  A=a;a.onerror=()=>{if(A!==a)return;if(!t.blob&&stage<2){killEl(a);attempt(stage+1)}else msg('Could not load that audio.')};
+  if(stage===2){fake=true;a.volume=vol}else{try{const ms=ctx.createMediaElementSource(a);a._ms=ms;ms.connect(dry);bypass();a.volume=1;fake=false;eShift();wkP&&wkP.then(eShift,()=>{})}catch(e){fake=true;a.volume=vol}}
   if(stage===2)bypass();
   showRate(Math.min(ASMAX,Math.max(ASMIN,speed)));
   go(a)};
- attempt(o.lite?2:0)}
+ attempt(o.lite&&!o.vis?2:0)}
 const playing=()=>mode==='b'?E.on:!!(A&&!A.paused&&!A.ended);
-const T=()=>mode==='b'?Tb():(A?A.currentTime:0);
+let eskV=0,esk=0,eskT=null;
+const T=()=>mode==='b'?Tb():(A?(eskT?eskV:A.currentTime):0);
 const D=()=>mode==='b'?dur():(A&&isFinite(A.duration)?A.duration:0);
 let rsq=0;
 function seek(t){t=Math.min(Math.max(0,t),D()||t);if(mode==='b'){E.pos=t;
   if(E.on){E.p0=t;E.t0=ctx.currentTime; // clock follows the new position right away; the audio source restarts on the next frame
-   if(!rsq)rsq=requestAnimationFrame(()=>{rsq=0;if(E.on)startSrc()})}}else if(A)A.currentTime=t}
+   if(!rsq)rsq=requestAnimationFrame(()=>{rsq=0;if(E.on)startSrc()})}}else if(A){eskV=t;const now=performance.now(),go=()=>{eskT=null;esk=performance.now();if(A)A.currentTime=eskV};if(now-esk>120){clearTimeout(eskT);go()}else if(!eskT)eskT=setTimeout(go,120-(now-esk))}} // <audio>: at most ~8 seeks a second while scrubbing
 function toggle(){if(cur<0){if(tracks.length)load(0);return}
  if(ctx&&ctx.state==='suspended')ctx.resume();
  if(mode==='b'){if(!E.buf){if(!A)load(cur);return}E.on?pause():play()}else if(A){A.paused?A.play():A.pause()}}
@@ -398,15 +405,15 @@ let wm='seek',off=0,acc=1,moved=false,downOnHub=false;
 // (200 deg of platter = 1 s of audio, i.e. 33 1/3 rpm), pitch follows speed, backwards = reversed audio. Letting go resumes playback.
 const WMS=['seek','speed','scratch'],SCR=200;let sc=false,scrA=0,scrA0=0,scrP=0;
 function prepScratch(){ // build the reversed copy up front so the first backwards scratch doesn't stall
- if(mode!=='b'){msg('Scratching needs a downloaded file, not a stream');return}
+ if(mode!=='b'){if(!(lite||freed))msg('Scratching needs a downloaded file, not a stream');return}
  if(E.buf&&!E.rb)setTimeout(rbufAsync,60)} // short tracks on desktop get the whole reversed copy up front; long tracks / phones use a sliding window (see rbuf)
-function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch')prepScratch()}
+function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch'){needEngine();prepScratch()}}
 $('wm').onclick=()=>setWm(WMS[(WMS.indexOf(wm)+1)%WMS.length]);
 try{const v=localStorage.getItem('tp7.wm');if(WMS.includes(v))setWm(v)}catch(e){}
 addEventListener('keydown',e=>{if(e.target.tagName!=='INPUT'&&e.key.toLowerCase()==='m')$('wm').click()});
 let vs=0,lastMv=0;
 const wheelBy=d=>{if(wm!=='speed'){if(!(tape&&mode==='b'))seek(T()+d/12)}else{off+=d;acc=clampS(acc*Math.pow(2,d/360));setSpeed(acc)}};
-W.onpointerdown=e=>{if(wm==='scratch')needEngine();wRect=null;drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
+W.onpointerdown=e=>{if(wm==='scratch'||(wm==='seek'&&tape))needEngine();wRect=null;drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
  sc=wm==='scratch'&&mode==='b'&&!!E.buf;if(sc){scrP=T();scrA=scrA0=T()*30+off}};
 W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;if(sc)scrA+=d;else wheelBy(d)};
 W.onpointerup=W.onpointercancel=()=>{if(drag&&!moved&&downOnHub)$('wm').click();if(sc){off=scrA-T()*30;sc=false}drag=false;W.style.cursor='grab'};
@@ -470,7 +477,8 @@ const LASTK='tp7.last';let resume=null;
 function tkey(t){return t&&(t.id||t.src||t.title)}
 function lastSaved(){try{return JSON.parse(localStorage.getItem(LASTK)||'null')}catch(e){return null}}
 function saveLast(){try{if(cur<0||!tracks[cur])return;localStorage.setItem(LASTK,JSON.stringify({k:tkey(tracks[cur]),t:T()}))}catch(e){}}
-setInterval(()=>{if(playing())saveLast()},3000);
+let idle=0;
+setInterval(()=>{if(playing()){saveLast();idle=0}else if(MOBILE&&mode==='b'&&E.buf&&E.ov==null&&!wantEngine()&&!document.hidden){if(++idle>=7){idle=0;const t=tracks[cur],p=Tb();E.pos=p;E.buf=null;E.rb=null;E.rw=null;rbJob++;freed=true;resume={k:tkey(t),t:p};saveLast()}}else idle=0},3000); // paused ~20 s: drop the decoded copy; the next play streams (light) from the same spot
 addEventListener('pagehide',saveLast);
 // ---- memory: what the page keeps while it is in the background ----
 // Android kills the biggest background app first when another app needs RAM, and the decoded audio (tens to hundreds of MB) is by far the
@@ -482,37 +490,59 @@ const HO=.12;let S=null,pend=null,rt=0; // S: standby <audio> for the current tr
 function dropStandby(){cancelWarm();if(S){try{S.pause();S.removeAttribute('src');S.load()}catch(e){}S=null}}
 function standby(t){if(S&&S._t===t)return S;dropStandby();const a=new Audio();a._t=t;a.preload='metadata';a.src=t.src;S=a;return a}
 function cancelWarm(){if(pend){clearTimeout(pend.to);try{pend.a.pause()}catch(e){}pend=null}}
-function prewarm(){if(!MOBILE||pend||mode!=='b'||!E.on||E.d0<0||E.ov!=null||!E.buf||cur<0||!tracks[cur])return;
- const t=tracks[cur],a=standby(t),p=Tb();a.volume=0;a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,E.s0||speed));pitchMode(a);
- const go=()=>{try{a.currentTime=Math.min(p+HO,Math.max(0,dur()-.2))}catch(e){}a.play().catch(()=>{})};
+function prewarm(){
+ if(!MOBILE||pend||cur<0||!tracks[cur]||!playing())return;
+ if(mode==='b'){if(E.d0<0||E.ov!=null||!E.buf)return}else if(!(A&&!fake))return;
+ const t=tracks[cur],a=standby(t),p=T();a.volume=0;a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,mode==='b'?(E.s0||speed):A.playbackRate));pitchMode(a);
+ const go=()=>{try{a.currentTime=Math.min(p+HO,Math.max(0,D()-.2))}catch(e){}a.play().catch(()=>{})};
  a.readyState>=1?go():a.addEventListener('loadedmetadata',go,{once:true});pend={a,t}}
 function closeCtx(){try{ctx&&ctx.close()}catch(e){}ctx=an=gn=dry=wet=wk=wkP=null;wkOn=false} // nothing needs it while in the background
-function commit(a){const t=tracks[cur],pe=Tb();clearTimeout(pend&&pend.to);
+function commit(a){const t=tracks[cur],pe=T();clearTimeout(pend&&pend.to);saveLast();
  E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false;
- pause();E.pos=pe;saveLast();E.buf=null;E.rb=null;E.rw=null;rbJob++;
+ if(mode==='b'){pause();E.pos=pe;E.buf=null;E.rb=null;E.rw=null;rbJob++}else{killEl(A);A=null}
  if(Math.abs(a.currentTime-pe)>.25){try{a.currentTime=pe}catch(e){}} // only if the warm-up drifted
  S=null;pend=null;++LG;mode='e';A=a;lite=true;freed=false;fake=true;a.volume=vol;a.onended=auto;a.onerror=()=>{if(A===a)msg('Could not load that audio.')};
  a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);
  if(rev){bgRev=true;rev=false;$('rev').classList.remove('on')}
  bypass();closeCtx()}
-function dropNow(){ // no warm element available (reverse, shuttle, slow start): stop the engine and carry on through a fresh element
- const t=tracks[cur],was=E.on,p=Tb();cancelWarm();
- if(!was&&E.buf.length*E.buf.numberOfChannels<4e6)return; // paused and tiny: not worth it
- E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false;
- pause();E.pos=p;saveLast();E.buf=null;E.rb=null;E.rw=null;rbJob++;dropStandby();
+function dropNow(){ // no warm element available (reverse, shuttle, slow start): stop and carry on through a fresh element
+ const t=tracks[cur],was=playing(),p=T(),d0=D();cancelWarm();
+ if(mode==='b'&&!was&&E.buf&&E.buf.length*E.buf.numberOfChannels<4e6)return; // paused and tiny: not worth it
+ E.ov=null;drag=false;sc=false;scratching=false;lp=0;ld=false;saveLast();
+ if(mode==='b'){pause();E.pos=p;E.buf=null;E.rb=null;E.rw=null;rbJob++}else{killEl(A);A=null;E.dd=d0}
+ dropStandby();
  if(was)fallback(t,cur,true,++LG,{at:p,lite:1});
- else{freed=true;resume={k:tkey(t),t:p}} // paused: nothing to play, just free it (play from the notification reloads it)
+ else{freed=true;mode='b';E.on=false;E.buf=null;E.pos=p;resume={k:tkey(t),t:p}} // paused: nothing to play, just free it (play from the notification reloads it)
  closeCtx()}
 function goLite(){
- if(!MOBILE||mode!=='b'||!E.buf||cur<0||!tracks[cur])return;
+ if(!MOBILE||cur<0||!tracks[cur])return;
+ const eng=mode==='b'&&E.buf,el=mode==='e'&&A&&!fake; // the decoded engine, or an <audio> element on the Web Audio graph
+ if(!eng&&!el)return;
  const t=tracks[cur];
- if(E.on&&E.d0>0&&E.ov==null){
+ if(playing()&&(el||(E.d0>0&&E.ov==null))){
   prewarm();const w=pend;if(!w)return dropNow();
-  const done=()=>{if(pend!==w||!document.hidden||mode!=='b'||cur<0||tracks[cur]!==t)return;if(E.on)commit(w.a);else dropNow()};
+  const done=()=>{if(pend!==w||!document.hidden||cur<0||tracks[cur]!==t)return;if(playing())commit(w.a);else dropNow()};
   if(w.a.readyState>=3&&!w.a.paused&&w.a.currentTime>0)done();
   else{w.a.addEventListener('playing',done,{once:true});w.to=setTimeout(()=>{if(pend===w&&document.hidden)dropNow()},2500)}
   return}
  dropNow()}
+// back in front after a stay in the background: the direct <audio> goes back onto the Web Audio graph (live meter, semitone pitch),
+// started in sync and silent first so there is no gap
+function relight(){
+ const t=tracks[cur],old=A;if(!t||!old||mode!=='e'||!fake||!MOBILE)return;
+ try{ensureCtx();if(ctx.state==='suspended')ctx.resume()}catch(e){return}
+ const rg=++RG,g=LG,a=new Audio(),was=!old.paused;let ms=null,done=0,to=0;
+ const fail=()=>{if(done)return;done=1;clearTimeout(to);try{a.onerror=a.onended=null;a.pause();ms&&ms.disconnect();a.removeAttribute('src');a.load()}catch(e){}try{bypass()}catch(e){}};
+ const swap=()=>{if(done)return;if(rg!==RG||g!==LG||A!==old)return fail();done=1;clearTimeout(to);
+  const pp=old.currentTime;killEl(old);if(Math.abs(a.currentTime-pp)>.25){try{a.currentTime=pp}catch(e){}}
+  A=a;a._ms=ms;fake=false;a.volume=1;a.onended=auto;a.onerror=()=>{if(A===a)msg('Could not load that audio.')};bypass();eShift()};
+ to=setTimeout(fail,5000);
+ if(!t.blob)a.crossOrigin='anonymous';
+ a.preload='auto';a.src=t.src;a.defaultPlaybackRate=a.playbackRate=old.playbackRate;pitchMode(a);a.onerror=fail;
+ try{ms=ctx.createMediaElementSource(a);ms.connect(dry);dry.gain.value=0;wet.gain.value=0}catch(e){return fail()}
+ const start=()=>{try{a.currentTime=Math.min(old.currentTime+HO,Math.max(0,(old.duration||1e9)-.2))}catch(e){}
+  if(was){a.addEventListener('playing',swap,{once:true});a.play().catch(fail)}else a.addEventListener('seeked',swap,{once:true})};
+ a.readyState>=1?start():a.addEventListener('loadedmetadata',start,{once:true})}
 // back in the foreground: decode again and swap the full engine back in at the current position
 async function restore(){
  const t=tracks[cur];if(!t||!(lite||freed))return;
@@ -524,17 +554,17 @@ async function restore(){
   if(freed)fallback(t,cur,false,g,{at:E.pos});else{lite=false;msg(STREAMMSG)}
   return}
  let p,was=false;
- if(lite){if(mode!=='e'||!A)return;was=playing();p=A.currentTime;A.pause();try{A.removeAttribute('src');A.load()}catch(e){}A=null}
+ if(lite){if(mode!=='e'||!A)return;was=playing();p=T();killEl(A);A=null}
  else p=E.pos;
  lite=freed=false;mode='b';fake=false;E.buf=b;E.dd=b.duration;E.rb=null;E.rw=null;E.on=false;E.pos=Math.max(0,Math.min(p,b.duration-.05));
  $('dur').textContent=fmt(b.duration);showRate(speed);if(bgRev){bgRev=false;setRev(true)}replan();if(wm==='scratch')prepScratch();
- if(MOBILE)standby(t);if(was)play()}
+ if(was)play()}
 document.addEventListener('visibilitychange',()=>{
  if(document.hidden){saveLast();RG++;clearTimeout(rt);E.rb=null;E.rw=null;rbJob++;goLite();return}
  cancelWarm(); // the reversed copy is always dropped (rebuilt on demand)
  if(ctx&&ctx.state==='closed'){const k=tkey(tracks[cur]),t=E.pos;ctx=an=gn=dry=wet=wk=wkP=null;E.on=false;lite=freed=false;if(k){resume={k,t};if(cur>=0)load(cur,false)}return}
  if(ctx&&ctx.state!=='running')ctx.resume().catch(()=>{});
- if(lite||freed){clearTimeout(rt);rt=setTimeout(()=>{if(!document.hidden)restore()},1500)}}); // not straight away: decoding right when you switch back is what makes the UI stutter
+ if(lite||freed){clearTimeout(rt);const eng=wantEngine();rt=setTimeout(()=>{if(document.hidden)return;if(eng||wantEngine())restore();else if(lite&&fake)relight()},eng?1500:250)}}); // engine: not straight away (decoding right as you switch back makes the UI stutter) // not straight away: decoding right when you switch back is what makes the UI stutter
 if(MOBILE){addEventListener('blur',prewarm);document.addEventListener('pause',prewarm);const un=()=>{if(!document.hidden)cancelWarm()};addEventListener('focus',un);document.addEventListener('resume',un)}
 addEventListener('freeze',saveLast);
 
