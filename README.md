@@ -2,6 +2,19 @@
 
 Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 
+    tp7/
+      public/index.html   the site
+      src/worker.js       /api/proxy?url=...  (CORS-free audio relay, SSRF-guarded)
+      wrangler.jsonc
+
+## Deploy
+    npm i -g wrangler        # or use npx
+    wrangler login
+    wrangler deploy          # run from this folder
+
+## Local dev
+    wrangler dev
+
 ## Notes
 - Playback tries: direct URL -> /api/proxy -> direct without meter.
 - The proxy only returns audio/video content types, blocks private IPs, and only
@@ -15,6 +28,14 @@ Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 - Layout follows the TP-7 black edition: platter = wheel (SEEK or SPEED; toggle with the side M button, the hub, the grey button or M key), left lever = fast-forward / rewind (springs back), + - and the bottom knob = volume, bottom-right slits = level meters, keys = rec / play / stop, side buttons = prev / next.
 - **LOOP** button (or L key) cycles LOOP: OFF (play the list once) -> LOOP: ALL (wrap around) -> LOOP: ONE (repeat the current track) -> SHUFFLE (random order, no repeats until every track has played; PREV steps back through what was played). NEXT/PREV still skip tracks in LOOP: ONE. The choice is remembered.
 - **SCRATCH**: the ◎ button under the OLED (or the M key / tapping the hub) cycles the wheel through SEEK -> SPEED -> SCRATCH. In SCRATCH the platter works like a turntable: touch it and the record is held, move it and the audio moves with your finger (200 degrees of platter = 1 second of audio, i.e. 33 1/3 rpm), pitch follows speed, backwards gives reversed audio, and letting go resumes playback (or leaves it paused if it was paused). It needs a downloaded/decoded file, not a stream. The mode is remembered.
+- **Behaves like the real TP-7** (checked against teenage engineering's user guide v1.1.9, the firmware 1.1.3-1.1.11 release notes and written reviews):
+  - *hold your finger on the reel to pause* playback (or the recording, "off the record"), let go to carry on; rotating the reel scrubs instead;
+  - *recording:* tap REC to arm (the red LED flashes slowly), PLAY starts recording, STOP cancels; hold REC to record a memo while held. The reel spins and the counter shows the recorded time while recording, the VU meters follow the input, holding the reel pauses it;
+  - *REEL: BOTH / PLAY / OFF* = the system menu's tape reel motor: spins in play and rec / only in play / off (then it neither spins nor scrubs);
+  - *cue points and loop in/out* (firmware 1.1.3): CUE sets a cue here (hold = clear all, C on the keyboard), the arrows jump between them, A-B sets the loop IN, then OUT (loops), then off. Cues are remembered per track;
+  - *hold the display* for file info (title, length, sample rate, mono / stereo);
+  - STOP twice goes back to the start (already the case), the lever is the rocker, M is the mode button.
+- **Hidden: tape stop.** Tap the indicator light (the dot under the wheel) five times quickly to switch it on or off (the OLED shows MOTOR ON / OFF; the wheel mode stays as it was). With it on, PAUSE winds the reel down to a stop and PLAY winds it up from a standstill, speed and pitch together, like a motor. Pressing play during the wind-down winds back up. It works in every playback path (decoded engine and streaming) and is skipped while the page is in the background.
 - **Background playback, memory and the notification.** Decoded audio is big (a 10 MB MP3 is 200+ MB in RAM) and Android kills the biggest background app first, so on phones:
   - **light by default on phones:** plain listening streams through an `<audio>` element that is routed through the same Web Audio graph, so the live meters, speed (the browser's own time-stretch) and the semitone pitch shifter all work, but nothing big is held in RAM (a few MB instead of 74-230 MB per track). The decoded engine is built only when a feature needs it: REV, SCRATCH mode, wheel scrubbing in TAPE mode, the lever, or a speed beyond 16x / below 0.06x. It is freed again when you pause for ~20 s, and the next track starts light again;
   - the switch to background playback is gapless: as soon as the app starts to leave (activity paused / window blur) a silent `<audio>` element is started in sync, and only when it is running does the engine stop and the element become audible. The full engine is rebuilt about 1.5 s after you come back (or immediately if you press REV / PITCH / touch the platter in SCRATCH), not right away, so switching back doesn't stutter;
@@ -31,7 +52,14 @@ Static TP-7-style audio player + a Cloudflare Worker audio proxy.
 ## Offline apps (Windows / Android)
 Local files and recordings are stored in the browser/app (IndexedDB), so the library works with no internet (remote links obviously need a connection).
 
-- **Install web app (PWA, Android/Chrome/Edge/desktop):** the INSTALL button on the page. It caches itself and works offline.
+- **Install from the site (PWA, Android/Chrome/Edge/desktop):** the INSTALL button on the page. It caches itself and works offline.
+- **Windows .exe:** `npm install && npm run app` to run, `npm run dist:win` to build `tp7-setup.exe` + `tp7-portable.exe` in dist/.
+  A ready-to-run folder (`TP-7.exe`) is in the separate apps zip.
+- **Android APK:** needs the Android SDK, so build it in CI: push this folder to GitHub and run the "build-apps" workflow
+  (Actions tab > Run workflow) to get `tp7.apk` (debug-signed; allow "install unknown apps"). Every successful run also publishes
+  tp7-setup.exe / tp7-portable.exe / tp7.apk on the Releases page (a manual run makes a pre-release named `build-N`; pushing a tag like
+  `v1.1` makes a normal release). If one platform fails, the other is still published, and a failed Android run uploads
+  an `android-build-reports` artifact with the Gradle reports.
 - **Download buttons on the site:** put the release URLs in `const DL={win:'',apk:''}` near the bottom of public/index.html
   (e.g. https://github.com/YOU/REPO/releases/latest/download/tp7.apk), or drop `tp7.apk` / `tp7-windows.zip` into public/downloads/
   (each file must be under Cloudflare's 25 MB asset limit). The buttons only appear when a file exists.
