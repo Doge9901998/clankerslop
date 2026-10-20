@@ -50,7 +50,7 @@ html[data-ed=al] .dev{--bodyg:linear-gradient(180deg,#e4e4e4 0,#d7d7d7 5%,#d5d5d
 html[data-ed=al] #hub{background:linear-gradient(135deg,#cdced0 0,#d6d7d9 28%,#e4e5e6 33.5%,#eeeeef 35.5%,#8f9092 36.2%,#85868a 60%,#717275 100%);box-shadow:0 0 0 .3cqw #7e7f81,inset .3cqw .4cqw .6cqw #0003,inset -.15cqw -.2cqw .3cqw var(--hubh)} /* faceted two-tone hub of the aluminum edition */
 #hub i{position:absolute;width:6%;aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--hd1) 0,var(--hd3) 35%,var(--hd2) 75%);box-shadow:0 .15cqw .25cqw #0009} /* domed screw heads */
 #dot{left:7.9%;top:66.2%;width:7.7%;aspect-ratio:1;border-radius:50%;border:0;padding:0;cursor:pointer;background:radial-gradient(circle at 40% 35%,var(--d1),var(--d2));box-shadow:0 0 0 .3cqw var(--dr)}
-#dot.pl{box-shadow:0 0 2.4cqw #fff7,0 0 0 .3cqw var(--dr)}#dot.rec{background:radial-gradient(#ff9a70,#ff4f12);box-shadow:0 0 3cqw #ff4f12}#dot.sp{filter:brightness(1.4)}
+#dot.pl{box-shadow:0 0 2.4cqw #fff7,0 0 0 .3cqw var(--dr)}#dot.rec{background:radial-gradient(#ff9a70,#ff4f12);box-shadow:0 0 3cqw #ff4f12}#dot.sp{filter:brightness(1.4)}#dot.arm{animation:arm 1.2s infinite}@keyframes arm{0%,49%{background:radial-gradient(#ff9a70,#ff4f12);box-shadow:0 0 3cqw #ff4f12}50%,100%{background:radial-gradient(circle at 40% 35%,var(--d1),var(--d2));box-shadow:0 0 0 .3cqw var(--dr)}} /* armed to record: the red LED flashes slowly, solid red while recording */
 .cap{left:87.5%;top:67.1%;width:23%;height:9.5cqw;transform:translate(-50%,-50%) rotate(-45deg);border-radius:5cqw;background:var(--c1);box-shadow:0 0 0 .3cqw var(--cr1),0 0 0 .55cqw var(--cr2)}
 #vp,#vm{width:7.7%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;border:0;padding:0;background:radial-gradient(var(--v1),var(--v2));box-shadow:0 0 0 .3cqw var(--vr);color:var(--vfg);font-size:4.4cqw;cursor:pointer;display:grid;place-items:center}
 #vp{left:92.1%;top:63.9%}#vm{left:83%;top:70.2%}
@@ -96,8 +96,9 @@ button,.side,.key{touch-action:manipulation}#lev,#knob,#wheel,#slow,#fast,#pdn,#
 <div class="stat"><span id="st">STOP</span><span id="dur">--:--</span><button id="wm" style="height:28px">◎ SEEK</button></div>
 <div class="row"><button id="slow">◀ SLOW</button><button id="rate">1.00×</button><button id="fast">FAST ▶</button><button id="tape" title="Pitch follows speed">TAPE</button></div>
 <div class="row"><button id="pdn" title="Pitch down one semitone (,)">▼ PITCH</button><button id="pitch" title="Click to reset">+0 st</button><button id="pup" title="Pitch up one semitone (.)">PITCH ▲</button><button id="rev" title="Play backwards (R)">◀ REV</button></div>
+<div class="row"><button id="cue" title="Cue point: tap = set one here, hold = clear all (C)">⚑ CUE</button><button id="cp" title="Previous cue">◀ CUE</button><button id="cn" title="Next cue">CUE ▶</button><button id="ab" title="Loop: tap = IN point, tap = OUT point (loops), tap = off">A–B: OFF</button></div>
 <div class="row"><input id="url" type="text" placeholder="Audio URL (mp3, wav, CDN…)" autocomplete="off"><button id="add" style="flex:0 0 auto">LOAD</button></div>
-<div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label><button id="lm" title="Repeat mode: no loop / loop all / loop one / shuffle (L)">LOOP: OFF</button></div>
+<div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label><button id="lm" title="Repeat mode: no loop / loop all / loop one / shuffle (L)">LOOP: OFF</button><button id="reel" title="Tape reel motor (as in the TP-7 system menu): spins in play and rec / only in play / off (then it neither spins nor scrubs)">REEL: BOTH</button></div>
 <div class="row" id="inst" style="margin:8px 0 0"><button id="pwa" title="Install as an offline app">⬇ INSTALL</button><a class="file" id="dlw" hidden>WINDOWS</a><a class="file" id="dla" hidden>ANDROID</a></div>
 <div id="msg"></div><ol id="list"></ol></div>
 <script>
@@ -170,8 +171,10 @@ const E={buf:null,rb:null,rw:null,dd:0,src:null,on:false,pos:0,t0:0,p0:0,s0:1,d0
 const dur=()=>E.buf?E.buf.duration:E.dd; // dd = length of the track whose decoded copy was dropped while in the background
 function Tb(){if(!E.on||!ctx)return E.pos;return Math.min(Math.max(E.p0+E.d0*(ctx.currentTime-E.t0)*E.s0,0),dur())}
 let scratching=false; // true while the platter is being scratched: pitch must follow speed like a real record
-function plan(){let s,d;if(E.ov!=null){s=Math.abs(E.ov);d=E.ov<0?-1:1}else{s=speed;d=rev?-1:1}
- s=clampS(s);const p=(tape||scratching?s:1)*pr();return{s,d,q:Math.min(1e6,Math.max(1e-6,p/s))}}
+// mm: tape-stop motor factor (1 = full speed). It scales the speed AND the pitch together (a motor winding down or up), so the pitch shifter ratio q stays constant.
+let mm=1,mAn=null,TS=false;try{TS=localStorage.getItem('tp7.tapestop')==='1'}catch(e){}
+function plan(){let s,d,m=1;if(E.ov!=null){s=Math.abs(E.ov);d=E.ov<0?-1:1}else{m=Math.max(mm,.002);s=speed*m;d=rev?-1:1} // never exactly 0: the pitch ratio q = p/s must stay finite and constant
+ s=clampS(s);const p=(tape||scratching?s:m)*pr();return{s,d,q:Math.min(1e6,Math.max(1e-6,p/s))}}
 // The worklet only gets pulled by the audio thread while it is connected to the output, so connect it just while a shift is needed.
 let wkOn=false,wkT=0;
 function wkSet(on){if(!wk)return;clearTimeout(wkT);
@@ -210,7 +213,7 @@ function ended(){const d=E.d0;
  E.on=false;E.src=null;E.pos=d>0?dur():0;if(E.ov!=null)return;if(d>0)auto();else if(d<0&&lm==='one')play()} // reverse + loop one: wrap back to the end
 function play(){if(!E.buf)return;if(ctx.state==='suspended')ctx.resume();
  if(rev&&E.pos<=.05)E.pos=dur();if(!rev&&E.pos>=dur()-.01)E.pos=0;E.on=true;startSrc()}
-function pause(){E.pos=Tb();E.on=false;killSrc()}
+function pause(){E.pos=Tb();E.on=false;killSrc();if(mAn){cancelAnimationFrame(mAn.raf);mAn=null}mm=1}
 // shuttle: while the lever is pushed (or the wheel scrubbed in TAPE mode) the tape runs at signed rate v, audibly, forwards or backwards
 function setOv(v){
  if(v!=null){const p=Tb();if(v>0&&p>=dur()-.01)v=0;if(v<0&&p<=.01)v=0}
@@ -228,8 +231,8 @@ function setOv(v){
 // ---------- controls ----------
 function needEngine(){if(lite||freed){clearTimeout(rt);restore()}}
 function applySpeed(){if(mode==='e'&&(speed>ASMAX||speed<ASMIN))needEngine();showRate(mode==='e'?Math.min(ASMAX,Math.max(ASMIN,speed)):speed);
- if(mode==='e'&&A){A.defaultPlaybackRate=A.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(A)}else replan()}
-const pitchMode=a=>{a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=!tape};
+ if(mode==='e'&&A){A.defaultPlaybackRate=Math.min(ASMAX,Math.max(ASMIN,speed));A.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed*mm));pitchMode(A);eShift()}else replan()}
+const pitchMode=a=>{a.preservesPitch=a.mozPreservesPitch=a.webkitPreservesPitch=!tape&&!(TS&&a._ms)}; // tape stop on the graph: the element runs 'tape style' and the shifter holds the pitch, so winding down moves it
 function setSpeed(v){speed=Math.round(clampS(v)*1e4)/1e4;applySpeed()}
 function setPitch(v){pst=Math.round(Math.min(PMAX,Math.max(-PMAX,v))*100)/100;showPitch();if(mode==='e')eShift();else replan()}
 function nudge(d){setSpeed(speed*Math.pow(2,d/12))}
@@ -243,8 +246,34 @@ function setRev(v){rev=v;$('rev').classList.toggle('on',rev);
  if(mode==='e'&&rev){rev=false;$('rev').classList.remove('on');msg('Reverse needs the full-quality engine; this track is streaming.');return}
  if(mode==='b'&&E.on&&rev&&Tb()<=.05)E.pos=dur();replan();flash(rev?'REVERSE':'FORWARD')}
 $('rev').onclick=()=>setRev(!rev);
-fast($('mbtn'),()=>$('wm').click());fast($('dot'),()=>$('wm').click());
-fast($('stop'),()=>{if(cur<0)return;if(playing())toggle();else seek(0)});
+// ---- cue points and loop in/out (TP-7 firmware 1.1.3). Cues are remembered per track. ----
+let cues=[],loopA=0,loopB=0,abS=0,cueHold=0;
+const cueKey=()=>tkey(tracks[cur]);
+function loadCues(){let all={};try{all=JSON.parse(localStorage.getItem('tp7.cues')||'{}')}catch(e){}cues=((cur>=0&&all[cueKey()])||[]).slice();abS=0;showAB()}
+function saveCues(){try{const all=JSON.parse(localStorage.getItem('tp7.cues')||'{}');if(cues.length)all[cueKey()]=cues;else delete all[cueKey()];localStorage.setItem('tp7.cues',JSON.stringify(all))}catch(e){}}
+function addCue(){if(cur<0)return;const t=+T().toFixed(2);if(cues.findIndex(c=>Math.abs(c-t)<.25)<0){cues.push(t);cues.sort((a,b)=>a-b);saveCues()}flash('CUE '+(cues.findIndex(c=>Math.abs(c-t)<.25)+1)+'/'+cues.length)}
+function jumpCue(d){if(cur<0)return;if(!cues.length)return flash('NO CUES');const t=T();let i;
+ if(d>0){i=cues.findIndex(c=>c>t+.3);if(i<0)i=0}else{i=-1;for(let k=0;k<cues.length;k++)if(cues[k]<t-.6)i=k;if(i<0)i=cues.length-1}
+ seek(cues[i]);flash('CUE '+(i+1)+'/'+cues.length)}
+function showAB(){const b=$('ab');b.textContent=abS===0?'A–B: OFF':abS===1?'A–B: IN '+fmt(loopA):'A–B: ON';b.classList.toggle('on',abS>0)}
+function abClick(){if(cur<0)return;
+ if(abS===0){loopA=T();abS=1;flash('LOOP IN')}
+ else if(abS===1){const t=T();if(t>loopA+.1){loopB=t;abS=2;flash('LOOP ON')}else flash('PLAY ON, SET OUT')}
+ else{abS=0;flash('LOOP OFF')}showAB()}
+const CB=$('cue');
+CB.onpointerdown=e=>{if(e.button>0)return;clearTimeout(cueHold);cueHold=setTimeout(()=>{cueHold=0;cues=[];saveCues();flash('CUES CLEARED')},700)};
+CB.onpointerup=()=>{if(cueHold){clearTimeout(cueHold);cueHold=0;addCue()}};CB.onpointerleave=CB.onpointercancel=()=>{clearTimeout(cueHold);cueHold=0};
+CB.onclick=e=>{if(e.detail===0)addCue()};
+$('cp').onclick=()=>jumpCue(-1);$('cn').onclick=()=>jumpCue(1);$('ab').onclick=abClick;
+// hold the display: file info (title, length, sample rate, mono / stereo), like the TP-7
+const OL=document.querySelector('.oled');let infT=0;
+OL.onpointerdown=()=>{clearTimeout(infT);infT=setTimeout(showInfo,550)};OL.onpointerup=OL.onpointercancel=OL.onpointerleave=()=>clearTimeout(infT);
+function showInfo(){if(cur<0||!tracks[cur])return;const b=mode==='b'&&E.buf,d=D();
+ const items=[tracks[cur].title,'LEN '+fmt(d),b?(Math.round(E.buf.sampleRate/100)/10)+'K '+(E.buf.numberOfChannels>1?'STEREO':'MONO'):(ctx?'OUT '+Math.round(ctx.sampleRate/100)/10+'K':'STREAM')];
+ clearTimeout(fl);items.forEach((x,i)=>setTimeout(()=>{$('ttl').textContent=x},i*1300));
+ fl=setTimeout(()=>{$('ttl').textContent=cur>=0&&tracks[cur]?tracks[cur].title:'NO TAPE'},items.length*1300)}
+fast($('mbtn'),()=>$('wm').click());fast($('dot'),dotTap);
+fast($('stop'),()=>{if(mr){stopRec();return}if(armed){setArmed(false);return}if(cur<0)return;if(mAn)mFinish();if(playing())toggle(true);else seek(0)});
 function flash(x){$('ttl').textContent=x;clearTimeout(fl);fl=setTimeout(()=>{$('ttl').textContent=cur>=0?tracks[cur].title:'NO TAPE'},900)}
 function setVol(v){vol=Math.min(1,Math.max(0,v));if(gn)gn.gain.value=vol;if(mode==='e'&&fake&&A)A.volume=vol;$('knob').style.backgroundPosition=Math.round(vol*300)+'px 0';flash('VOL '+Math.round(vol*100))}
 fast($('vp'),()=>setVol(vol+.05));fast($('vm'),()=>setVol(vol-.05));
@@ -262,7 +291,7 @@ lev.onpointerup=lev.onpointercancel=()=>{ld=false;lp=0;lev.style.transition='tra
 $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpeed();msg(tape?'Tape mode: pitch follows speed; scrub the wheel to hear it forwards and backwards.':'')};
 
 // ---------- loading ----------
-function stopAll(){killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;dropStandby();E.ov=null;E.pos=0;clearTimeout(eskT);eskT=null;killEl(A);A=null}
+function stopAll(){if(mAn){cancelAnimationFrame(mAn.raf);mAn=null}mm=1;killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;dropStandby();E.ov=null;E.pos=0;clearTimeout(eskT);eskT=null;killEl(A);A=null}
 // decoded audio is ~20x the file size in RAM, so phones get a much lower ceiling (bigger files stream through <audio> instead of being decoded)
 const MOBILE=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!(navigator.deviceMemory&&navigator.deviceMemory<=4);
 let LG=0;const MAXDEC=MOBILE?10e6:40e6;
@@ -272,7 +301,7 @@ const DECMAX=MOBILE?Math.min(160,Math.max(60,(navigator.deviceMemory||4)*32))*1e
 // The decoded engine (74-230 MB) is only built when a feature needs it: reverse, scratch, tape-scrub, lever, speeds beyond what <audio> can do.
 const wantEngine=()=>rev||bgRev||wm==='scratch'||speed>ASMAX||speed<ASMIN;
 function killEl(a){if(!a)return;try{a.onended=a.onerror=null;a.pause();a._ms&&a._ms.disconnect();a.removeAttribute('src');a.load()}catch(e){}}
-const eShift=()=>{if(!wk||!ctx||mode!=='e'||!A||!A._ms)return;if(!A._wk){try{A._ms.connect(wk);A._wk=1}catch(e){}}shift(pr())}; // connected lazily: the shifter module may still be loading when the element starts // <audio> already plays at the right speed: the shifter only adds the semitones
+const eShift=()=>{if(!wk||!ctx||mode!=='e'||!A||!A._ms)return;if(!A._wk){try{A._ms.connect(wk);A._wk=1}catch(e){}}shift(pr()/((TS&&!tape)?Math.min(ASMAX,Math.max(ASMIN,speed)):1))}; // connected lazily: the shifter module may still be loading when the element starts // <audio> already plays at the right speed: the shifter only adds the semitones
 let lite=false,freed=false,bgRev=false,RG=0; // lite: playing through <audio> only because the page is in the background; freed: decoded copy dropped while paused in the background
 function probe(u){return new Promise(r=>{const a=new Audio();let done=0;const to=setTimeout(()=>f(0),3000);
  const f=v=>{if(done)return;done=1;clearTimeout(to);a.onloadedmetadata=a.onerror=null;try{a.removeAttribute('src');a.load()}catch(e){}r(v)};
@@ -292,7 +321,7 @@ async function load(i,autoplay=true){
  if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];bag.add(t);
  if(t.file&&!t.src)t.src=URL.createObjectURL(t.file); // created on first play, not at import
  if(t.blob&&!t.src){t.ready&&t.ready.then(()=>load(i,autoplay));return}
- const g=++LG;stopAll();RG++;
+ const g=++LG;stopAll();RG++;loadCues();
  $('ttl').textContent=t.title;$('trk').textContent=String(i+1).padStart(2,'0');showRate(speed);$('dur').textContent='--:--';mark();
  if(MOBILE&&document.hidden)return fallback(t,i,autoplay,g,{at:takeResume(t),lite:1}); // in the background: stream through <audio>, decode properly when the page comes back
  try{ensureCtx();if(ctx.state==='suspended')ctx.resume()}catch(e){return msg('Web Audio is not available in this browser.')}
@@ -319,7 +348,7 @@ function fallback(t,i,autoplay,g,o){o=o||{};mode='e';E.buf=null;lite=!!o.lite;fr
   const a=new Audio(),src=stage===1?'/api/proxy?url='+encodeURIComponent(t.src):t.src;
   if(stage<2&&!t.blob)a.crossOrigin='anonymous';a.src=src;a.preload='auto';a.defaultPlaybackRate=a.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed));pitchMode(a);a.onended=auto;
   A=a;a.onerror=()=>{if(A!==a)return;if(!t.blob&&stage<2){killEl(a);attempt(stage+1)}else msg('Could not load that audio.')};
-  if(stage===2){fake=true;a.volume=vol}else{try{const ms=ctx.createMediaElementSource(a);a._ms=ms;ms.connect(dry);bypass();a.volume=1;fake=false;eShift();wkP&&wkP.then(eShift,()=>{})}catch(e){fake=true;a.volume=vol}}
+  if(stage===2){fake=true;a.volume=vol}else{try{const ms=ctx.createMediaElementSource(a);a._ms=ms;ms.connect(dry);pitchMode(a);bypass();a.volume=1;fake=false;eShift();wkP&&wkP.then(eShift,()=>{})}catch(e){fake=true;a.volume=vol}}
   if(stage===2)bypass();
   showRate(Math.min(ASMAX,Math.max(ASMIN,speed)));
   go(a)};
@@ -332,9 +361,34 @@ let rsq=0;
 function seek(t){t=Math.min(Math.max(0,t),D()||t);if(mode==='b'){E.pos=t;
   if(E.on){E.p0=t;E.t0=ctx.currentTime; // clock follows the new position right away; the audio source restarts on the next frame
    if(!rsq)rsq=requestAnimationFrame(()=>{rsq=0;if(E.on)startSrc()})}}else if(A){eskV=t;const now=performance.now(),go=()=>{eskT=null;esk=performance.now();if(A)A.currentTime=eskV};if(now-esk>120){clearTimeout(eskT);go()}else if(!eskT)eskT=setTimeout(go,120-(now-esk))}} // <audio>: at most ~8 seeks a second while scrubbing
-function toggle(){if(cur<0){if(tracks.length)load(0);return}
+function toggle(imm){if(armed&&imm!==true){setArmed(false);startRec();return} // armed to record: PLAY starts the recording, as on the TP-7
+ if(cur<0){if(tracks.length)load(0);return}
  if(ctx&&ctx.state==='suspended')ctx.resume();
+ if(TS&&imm!==true&&!document.hidden&&!mr&&((mode==='b'&&E.buf)||(mode==='e'&&A))){ // tape stop: slows to a stop on pause, winds up on play
+  if(mAn&&mAn.to===0){motorGo(1);return}
+  if(playing()){motorGo(0,realPause);return}
+  mm=0;mApply();realPlay();motorGo(1);return}
+ if(mAn)mFinish();
  if(mode==='b'){if(!E.buf){if(!A)load(cur);return}E.on?pause():play()}else if(A){A.paused?A.play():A.pause()}}
+function realPause(){if(mode==='b')pause();else if(A)A.pause()}
+function realPlay(){if(mode==='b')play();else if(A)A.play().catch(()=>{})}
+// ---- tape stop (hidden: tap the indicator light 5 times) ----
+const TSD=1,TSU=.7; // seconds to spin down from full speed / wind up from standstill
+function mApply(){
+ if(mode==='b'){if(E.on&&E.src&&ctx){const{s}=plan(),t=ctx.currentTime;E.pos=Tb();E.p0=E.pos;E.t0=t;E.s0=s;E.src.playbackRate.setTargetAtTime(s,t,.015)}}
+ else if(A)A.playbackRate=Math.min(ASMAX,Math.max(ASMIN,speed*mm))}
+function mFinish(){const a=mAn;if(!a)return;cancelAnimationFrame(a.raf);mAn=null;mm=a.to;mApply();a.done&&a.done();
+ if(a.to===0){mm=1;if(mode==='e'&&A){mApply();pitchMode(A)}}else if(mode==='b'&&E.on)replan()} // wound up: re-sync rate and shifter once more
+function motorGo(to,done){
+ if(mAn)cancelAnimationFrame(mAn.raf);
+ const from=mm,a={to,done,raf:0};mAn=a;
+ if(Math.abs(to-from)<.001||document.hidden){mFinish();return}
+ if(mode==='e'&&A&&!A._ms)A.preservesPitch=A.mozPreservesPitch=A.webkitPreservesPitch=!(tape||Math.abs(speed-1)<.01); // direct <audio> can't be pitch-compensated: let the pitch follow when speed is 1
+ const t0=performance.now(),dm=(to<from?TSD:TSU)*Math.abs(to-from)*1000;
+ const tick=n=>{if(mAn!==a)return;const u=Math.max(0,Math.min(1,(n-t0)/dm));
+  mm=to===0?from*(1-u):from+(to-from)*(1-(1-u)*(1-u));mApply();
+  if(u<1)a.raf=requestAnimationFrame(tick);else mFinish()};
+ a.raf=requestAnimationFrame(tick)}
 // ---- repeat / shuffle ----
 // off = play through the list once, all = wrap around, one = repeat the current track, shuffle = random order forever
 const LMS=['off','all','one','shuffle'],LML={off:'LOOP: OFF',all:'LOOP: ALL',one:'LOOP: ONE',shuffle:'SHUFFLE'};
@@ -382,20 +436,45 @@ function mark(){const L=$('list');if(lastCur)lastCur.classList.remove('cur');las
 function removeAt(i){if(tracks[i].id)idbDel(tracks[i].id);tracks.splice(i,1);if(i===cur){cur=-1;LG++;stopAll();$('ttl').textContent='NO TAPE'}else if(i<cur)cur--;save();render()}
 $('list').onclick=e=>{const li=e.target.closest('li');if(!li)return;const i=+li.dataset.i;if(e.target.closest('u'))removeAt(i);else load(i)};
 
-// mic recording
-let mr=null,chunks=[];
-$('rec').onclick=async()=>{
- if(mr){mr.stop();return}
- try{const st=await navigator.mediaDevices.getUserMedia({audio:true});mr=new MediaRecorder(st);chunks=[];
-  mr.ondataavailable=e=>chunks.push(e.data);
-  mr.onstop=()=>{st.getTracks().forEach(t=>t.stop());const b=new Blob(chunks,{type:mr.mimeType});mr=null;$('rec').classList.remove('on');
+// mic recording, as on the TP-7: tap REC = arm (the red LED flashes slowly), PLAY starts recording, STOP cancels;
+// hold REC = record a memo while held; hold the reel to pause the recording ("off the record"). The reel spins and the counter runs while recording.
+let mr=null,chunks=[],armed=false,recAcc=0,recT0=0,rhold=0,memoRec=false,rtap=0,recBusy=false,ra=null;
+const recSecs=()=>recAcc+(recT0?(performance.now()-recT0)/1000:0);
+function setArmed(v){if(v&&playing()){if(mAn)mFinish();if(playing())toggle(true)} // stop the music first (while not yet armed)
+ armed=v;$('dot').classList.toggle('arm',v);if(v)flash('ARMED')}
+async function startRec(memo){
+ if(mr||recBusy)return;recBusy=true;
+ try{const st=await navigator.mediaDevices.getUserMedia({audio:true});const r=new MediaRecorder(st);chunks=[];
+  r.ondataavailable=e=>chunks.push(e.data);
+  r.onstop=()=>{st.getTracks().forEach(t=>t.stop());try{r._ms&&r._ms.disconnect()}catch(e){}ra=null;const b=new Blob(chunks,{type:r.mimeType});mr=null;recT0=0;$('rec').classList.remove('on');
    add(keep(b,'REC '+new Date().toLocaleTimeString()),true)};
-  mr.start();$('rec').classList.add('on');if(playing())toggle()}catch(e){msg('Microphone access denied.')}};
+  try{ensureCtx();r._ms=ctx.createMediaStreamSource(st);ra=ctx.createAnalyser();ra.fftSize=256;r._ms.connect(ra)}catch(e){ra=null} // input level for the VU meters
+  mr=r;recAcc=0;recT0=performance.now();setArmed(false);r.start();$('rec').classList.add('on');if(playing())toggle(true);
+  if(memo&&!memoRec)r.stop()}catch(e){msg('Microphone access denied.')}finally{recBusy=false}}
+function stopRec(){if(mr&&mr.state!=='inactive')mr.stop()}
+function recHold(on){if(!mr)return;const n=performance.now();if(on){mr.pause();recAcc+=(n-recT0)/1000;recT0=0}else{mr.resume();recT0=n}}
+function recTap(){if(mr)stopRec();else if(armed){setArmed(false);startRec()}else setArmed(true)}
+const RB=$('rec');
+RB.onpointerdown=e=>{if(e.button>0)return;rtap=1;clearTimeout(rhold);rhold=0;if(!mr)rhold=setTimeout(()=>{rhold=0;rtap=0;memoRec=true;startRec(true)},350)};
+RB.onpointerup=RB.onpointercancel=RB.onpointerleave=()=>{clearTimeout(rhold);rhold=0;if(memoRec){memoRec=false;stopRec();rtap=0;return}if(rtap){rtap=0;recTap()}};
+RB.onclick=e=>{if(e.detail===0)recTap()}; // keyboard / screen reader
 fast($('pp'),toggle);fast($('prev'),()=>T()>3?seek(0):step(-1));fast($('next'),()=>step(1));
 addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(e.code==='Space'){e.preventDefault();toggle()}
- if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();if(e.key.toLowerCase()==='l')$('lm').click();
+ if(e.key==='[')nudge(-1);if(e.key===']')nudge(1);if(e.key===',')setPitch(pst-1);if(e.key==='.')setPitch(pst+1);if(e.key.toLowerCase()==='r')$('rev').click();if(e.key.toLowerCase()==='l')$('lm').click();if(e.key.toLowerCase()==='c')addCue();
  if(e.code==='ArrowRight')seek(T()+5);if(e.code==='ArrowLeft')seek(T()-5)});
 
+// tape reel motor (TP-7 system menu): spins in play and rec / only in play / off (then it neither spins nor scrubs)
+let reel='both';try{const v=localStorage.getItem('tp7.reel');if(v==='play'||v==='off')reel=v}catch(e){}
+const REELS=['both','play','off'];
+function setReel(m){reel=m;$('reel').textContent='REEL: '+m.toUpperCase();$('reel').classList.toggle('on',m!=='both');try{localStorage.setItem('tp7.reel',m)}catch(e){}}
+$('reel').onclick=()=>{setReel(REELS[(REELS.indexOf(reel)+1)%3]);flash('REEL '+reel.toUpperCase())};setReel(reel);
+// hold your finger on the reel to pause playback (or the recording: 'off the record'); let go to carry on. Rotating it scrubs instead.
+let hpT=0,hpOn=0,hpFired=false,trav=0;
+function holdPause(){hpT=0;if(!drag||sc||trav>4||hpOn)return;
+ if(mr&&mr.state==='recording'){try{recHold(true);hpOn='rec'}catch(e){}}
+ else{if(mAn)mFinish();if(playing()){toggle(true);hpOn='play'}}
+ if(hpOn)hpFired=true}
+function holdRelease(){const h=hpOn;hpOn=0;if(h==='rec')recHold(false);else if(h==='play'&&!playing())toggle(true)}
 // wheel: drag to scrub, spins when playing
 const W=$('wheel');let drag=false,last=0;
 let wRect=null;const pa=e=>{const r=wRect||(wRect=W.getBoundingClientRect());return Math.atan2(e.clientY-r.top-r.height/2,e.clientX-r.left-r.width/2)*180/Math.PI};
@@ -407,21 +486,29 @@ const WMS=['seek','speed','scratch'],SCR=200;let sc=false,scrA=0,scrA0=0,scrP=0;
 function prepScratch(){ // build the reversed copy up front so the first backwards scratch doesn't stall
  if(mode!=='b'){if(!(lite||freed))msg('Scratching needs a downloaded file, not a stream');return}
  if(E.buf&&!E.rb)setTimeout(rbufAsync,60)} // short tracks on desktop get the whole reversed copy up front; long tracks / phones use a sliding window (see rbuf)
-function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch'){needEngine();prepScratch()}}
+function setWm(m){wm=m;$('wm').textContent='◎ '+m.toUpperCase();$('dot').classList.toggle('sp',m==='speed');try{localStorage.setItem('tp7.wm',m)}catch(e){}if(m==='scratch'&&!dotSeq){needEngine();prepScratch()}}
 $('wm').onclick=()=>setWm(WMS[(WMS.indexOf(wm)+1)%WMS.length]);
+// hidden: 5 quick taps on the indicator light switch TAPE STOP on/off (the wheel mode ends up where it was)
+let dtN=0,dtT=0,dtW='seek',dotSeq=false,dtTm=0;
+function dotTap(){const now=performance.now();if(now-dtT>1600){dtN=0;dtW=wm}dtT=now;dtN++;dotSeq=true;
+ clearTimeout(dtTm);dtTm=setTimeout(()=>{dotSeq=false;if(wm==='scratch'){needEngine();prepScratch()}},1700); // the engine for SCRATCH is only built once the tapping stops
+ if(dtN>=5){dtN=0;setWm(dtW);TS=!TS;try{localStorage.setItem('tp7.tapestop',TS?'1':'0')}catch(e){}if(mAn)mFinish();applySpeed();flash(TS?'MOTOR ON':'MOTOR OFF');return}
+ $('wm').click()}
 try{const v=localStorage.getItem('tp7.wm');if(WMS.includes(v))setWm(v)}catch(e){}
 addEventListener('keydown',e=>{if(e.target.tagName!=='INPUT'&&e.key.toLowerCase()==='m')$('wm').click()});
 let vs=0,lastMv=0;
 const wheelBy=d=>{if(wm!=='speed'){if(!(tape&&mode==='b'))seek(T()+d/12)}else{off+=d;acc=clampS(acc*Math.pow(2,d/360));setSpeed(acc)}};
-W.onpointerdown=e=>{if(wm==='scratch'||(wm==='seek'&&tape))needEngine();wRect=null;drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
- sc=wm==='scratch'&&mode==='b'&&!!E.buf;if(sc){scrP=T();scrA=scrA0=T()*30+off}};
-W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;if(sc)scrA+=d;else wheelBy(d)};
-W.onpointerup=W.onpointercancel=()=>{if(drag&&!moved&&downOnHub)$('wm').click();if(sc){off=scrA-T()*30;sc=false}drag=false;W.style.cursor='grab'};
-W.onwheel=e=>{e.preventDefault();if(wm!=='speed')seek(T()+e.deltaY/40);else{acc=speed;nudge(e.deltaY<0?1:-1);off-=e.deltaY/4}};
+W.onpointerdown=e=>{if(reel==='off')return;if(wm==='scratch'||(wm==='seek'&&tape))needEngine();wRect=null;drag=true;moved=false;downOnHub=e.target.id==='hub';acc=speed;vs=0;lastMv=performance.now();last=pa(e);W.setPointerCapture(e.pointerId);W.style.cursor='grabbing';
+ sc=wm==='scratch'&&mode==='b'&&!!E.buf;if(sc){scrP=T();scrA=scrA0=T()*30+off}
+ trav=0;hpFired=false;clearTimeout(hpT);hpT=sc?0:setTimeout(holdPause,230)};
+W.onpointermove=e=>{if(!drag)return;const a=pa(e);let d=a-last;if(d>180)d-=360;if(d<-180)d+=360;last=a;trav+=Math.abs(d);if(trav>4&&(hpT||hpOn)){clearTimeout(hpT);hpT=0;if(hpOn)holdRelease()}if(Math.abs(d)>.5)moved=true;const nw=performance.now(),dt=(nw-lastMv)/1000;if(dt>0)vs=vs*.5+(d/Math.max(dt,.008))*.5;lastMv=nw;if(sc)scrA+=d;else wheelBy(d)};
+W.onpointerup=W.onpointercancel=()=>{clearTimeout(hpT);hpT=0;if(hpOn)holdRelease();if(drag&&!moved&&downOnHub&&!hpFired)$('wm').click();if(sc){off=scrA-T()*30;sc=false}drag=false;W.style.cursor='grab'};
+W.onwheel=e=>{e.preventDefault();if(reel==='off')return;if(wm!=='speed')seek(T()+e.deltaY/40);else{acc=speed;nudge(e.deltaY<0?1:-1);off-=e.deltaY/4}};
 
 // shuttle / tape varispeed: in TAPE mode the wheel scrub sets the tape rate (30deg/s = 1x, backwards = reverse audio);
 // the lever always shuttles audibly (up = forward up to 16x speed, down = reverse up to 16x)
 (function tk(n){
+ if(abS===2&&!drag&&playing()){const bk=mode==='b'&&E.d0<0,t=T();if(bk?t<=loopA:t>=loopB)seek(bk?loopB:loopA)} // loop in/out
  const scrub=drag&&wm==='seek';if(scrub&&n-lastMv>70)vs*=.75;
  const scr=drag&&sc&&mode==='b'&&!!E.buf&&(!downOnHub||moved);scratching=scr; // a tap on the hub only switches mode, it doesn't stop the music
  if(mode==='b'&&E.buf){
@@ -443,13 +530,14 @@ let fr=0,mf=0,vl=0;
  requestAnimationFrame(loop);
  const p=playing()||E.ov!=null&&E.ov!==0;
  if(!p&&!drag&&!mr&&lvl<.01&&(++fr&3))return; // nothing is moving: refresh the display at 15 Hz instead of 60 (saves battery and CPU)
- const t=T(),d=D();
+ const t0=T(),d=D(),t=mr?recSecs():t0; // while recording the counter shows the recorded time
  txt(eTm,Math.floor(t/3600)+'.'+String(Math.floor(t/60)%60).padStart(2,'0')+'.'+String(Math.floor(t%60)).padStart(2,'0'));
  if(d)txt(eDur,fmt(d));
- txt(eSt,mr?'REC':p?(E.d0<0&&mode==='b'?'REV':'PLAY'):cur<0?'STOP':'PAUSE');txt(ePp,playing()?'❚❚':'▶');
- const a=Math.round((((sc&&drag)?scrA:t*30+off)%360)*10)/10;if(a!==rd){rd=a;eRot.style.transform='rotate('+a+'deg)'} // while scratching the platter follows the finger exactly
+ txt(eSt,mr?(mr.state==='paused'?'PAUSE':'REC'):armed?'ARMED':p?(E.d0<0&&mode==='b'?'REV':'PLAY'):cur<0?'STOP':'PAUSE');txt(ePp,playing()?'❚❚':'▶');
+ if((reel!=='off'&&(!mr||(reel==='both'&&mr.state==='recording')))||(sc&&drag)){const a=Math.round((((sc&&drag)?scrA:t*30+off)%360)*10)/10;if(a!==rd){rd=a;eRot.style.transform='rotate('+a+'deg)'}} // the reel stops when the motor is off, or (play-only) while recording // while scratching the platter follows the finger exactly
  eDot.classList.toggle('pl',p);eDot.classList.toggle('rec',!!mr);
  let v=0;if(p){if(an&&!fake){if(mf^=1){an.getByteTimeDomainData(buf);let m=0;for(const b of buf)m=Math.max(m,Math.abs(b-128));vl=m/128}v=vl}else v=.25+.35*Math.abs(Math.sin(t*7.3)*Math.sin(t*2.1))}
+ if(!p&&mr&&ra&&mr.state==='recording'){ra.getByteTimeDomainData(buf);let m=0;for(const b of buf)m=Math.max(m,Math.abs(b-128));v=Math.min(1,m/128*1.4)} // VU meters follow the input while recording
  lvl+=(v-lvl)*.3;
  // level meters: 16 segments per column; redraw only when the number of lit segments (or the theme colours) changed
  const n1=Math.min(16,Math.ceil(lvl*1.6*16)),n2=Math.min(16,Math.ceil(lvl*.93*1.6*16)),k=n1+'|'+n2+'|'+C.lit+'|'+C.un;
@@ -535,7 +623,7 @@ function relight(){
  const fail=()=>{if(done)return;done=1;clearTimeout(to);try{a.onerror=a.onended=null;a.pause();ms&&ms.disconnect();a.removeAttribute('src');a.load()}catch(e){}try{bypass()}catch(e){}};
  const swap=()=>{if(done)return;if(rg!==RG||g!==LG||A!==old)return fail();done=1;clearTimeout(to);
   const pp=old.currentTime;killEl(old);if(Math.abs(a.currentTime-pp)>.25){try{a.currentTime=pp}catch(e){}}
-  A=a;a._ms=ms;fake=false;a.volume=1;a.onended=auto;a.onerror=()=>{if(A===a)msg('Could not load that audio.')};bypass();eShift()};
+  A=a;a._ms=ms;pitchMode(a);fake=false;a.volume=1;a.onended=auto;a.onerror=()=>{if(A===a)msg('Could not load that audio.')};bypass();eShift()};
  to=setTimeout(fail,5000);
  if(!t.blob)a.crossOrigin='anonymous';
  a.preload='auto';a.src=t.src;a.defaultPlaybackRate=a.playbackRate=old.playbackRate;pitchMode(a);a.onerror=fail;
@@ -560,7 +648,7 @@ async function restore(){
  $('dur').textContent=fmt(b.duration);showRate(speed);if(bgRev){bgRev=false;setRev(true)}replan();if(wm==='scratch')prepScratch();
  if(was)play()}
 document.addEventListener('visibilitychange',()=>{
- if(document.hidden){saveLast();RG++;clearTimeout(rt);E.rb=null;E.rw=null;rbJob++;goLite();return}
+ if(document.hidden){mFinish();saveLast();RG++;clearTimeout(rt);E.rb=null;E.rw=null;rbJob++;goLite();return}
  cancelWarm(); // the reversed copy is always dropped (rebuilt on demand)
  if(ctx&&ctx.state==='closed'){const k=tkey(tracks[cur]),t=E.pos;ctx=an=gn=dry=wet=wk=wkP=null;E.on=false;lite=freed=false;if(k){resume={k,t};if(cur>=0)load(cur,false)}return}
  if(ctx&&ctx.state!=='running')ctx.resume().catch(()=>{});
