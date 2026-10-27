@@ -673,6 +673,21 @@ function doAct(a,x){
  else if(a==='seekto'){if(typeof x==='number'&&isFinite(x))seek(x)}
  else if(a==='seekbackward')seek(T()-10);
  else if(a==='seekforward')seek(T()+10)}
+// ---- lyric-status link: tell lyric_status_media.py (on the home server, via the tunnel) what is playing ----
+// The key (PHONE_KEY from the server's .env) is asked once and kept on this device only, so it never ends up in the public repo.
+// App only: nothing is sent from the website or the installed PWA. Set NP_HOST to '' to turn it off in the app too.
+const NP_HOST='https://dogelyric.dogetuff.dev';
+let npAsked=false;
+function npSend(t,st,pos,rate){if(!NP_HOST||!NATIVE)return;try{ // NATIVE is only set inside the Android/iOS app, so the website and the PWA never send anything
+ const name=t?String(t.title||'').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/_/g,' ').trim():'';
+ const pl=st==='playing'&&!!name;
+ let key='';try{key=localStorage.getItem('tp7.npkey')||''}catch(e){}
+ if(!key){ // first time (or the server said the key is wrong): ask once per app start, only when something is playing
+  if(!pl||npAsked)return;npAsked=true;
+  key=(prompt('Lyric link key (PHONE_KEY on your server). Leave empty to turn the link off.')||'').trim();
+  if(!key)return;try{localStorage.setItem('tp7.npkey',key)}catch(e){}}
+ const q=new URLSearchParams({key,title:name,artist:'',state:pl?'playing':'paused',pos:(Math.max(0,pos)||0).toFixed(2),rate:String(rate||1)});
+ fetch(NP_HOST+'/np?'+q).then(r=>{if(r.status===403){try{localStorage.removeItem('tp7.npkey')}catch(e){}npAsked=false}}).catch(()=>{})}catch(e){}}
 function mediaInfo(force){try{
  const t=tracks[cur],pl=playing();if(pl)engaged=true;
  const st=!t?'none':pl?'playing':engaged?'paused':'none',now=Date.now(),d=D(),pos=Math.min(T(),d||T());
@@ -682,6 +697,7 @@ function mediaInfo(force){try{
  if(!force&&mk===miM&&st===miSt&&dd===miD&&r===miR){ // nothing changed but the clock: only re-sync the position if it jumped (seek / scrub) or every 10 s
   const exp=miP+(st==='playing'?(now-miN)/1000*r:0);if(Math.abs(pos-exp)<1.5&&now-miN<10000)return}
  const metaChg=force||mk!==miM,stChg=force||st!==miSt;miM=mk;miSt=st;miD=dd;miR=r;miP=pos;miN=now;
+ npSend(t,st,pos,r);
  const md=t?{title:t.title,artist:'TP-7',album:(cur+1)+' / '+tracks.length}:null;
  if(NATIVE){
   if(md&&metaChg)nm('setMetadata',ART?Object.assign({artwork:[{src:ART,sizes:'192x192',type:'image/png'}]},md):md);
