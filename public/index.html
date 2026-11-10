@@ -68,7 +68,7 @@ html[data-ed=al] #hub{background:linear-gradient(135deg,#cdced0 0,#d6d7d9 28%,#e
 .panel button,.file{height:36px;border:0;border-radius:9px;background:var(--pb);color:#eee;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .stat{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em}
 .row{display:flex;gap:8px;margin-bottom:8px}.row button{flex:1}
-#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on,#lm.on{background:#ff4f12}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
+#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on,#lm.on,#uat.on,#uget{background:#ff4f12}#upd button{flex:1}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
 .panel input[type=text]{flex:1;min-width:0;height:36px;border:0;border-radius:9px;padding:0 12px;font-size:13px;background:var(--pi);color:var(--pif);box-shadow:0 1px 3px #0003 inset}
 #msg{font-size:11px;min-height:14px;margin-top:8px;opacity:.7}
 #list{list-style:none;margin:12px 0 0;padding:0;font-size:12px;max-height:200px;overflow:auto}
@@ -100,6 +100,7 @@ button,.side,.key{touch-action:manipulation}#lev,#knob,#wheel,#slow,#fast,#pdn,#
 <div class="row"><input id="url" type="text" placeholder="Audio URL (mp3, wav, CDN…)" autocomplete="off"><button id="add" style="flex:0 0 auto">LOAD</button></div>
 <div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label><button id="lm" title="Repeat mode: no loop / loop all / loop one / shuffle (L)">LOOP: OFF</button><button id="reel" title="Tape reel motor (as in the TP-7 system menu): spins in play and rec / only in play / off (then it neither spins nor scrubs)">REEL: BOTH</button></div>
 <div class="row" id="inst" style="margin:8px 0 0"><button id="pwa" title="Install as an offline app">⬇ INSTALL</button><a class="file" id="dlw" hidden>WINDOWS</a><a class="file" id="dla" hidden>ANDROID</a></div>
+<div class="row" id="upd" hidden style="margin:8px 0 0"><button id="uat" title="Check GitHub Releases for a newer version when the app starts (at most every 6 hours)">AUTO-UPDATE: ON</button><button id="uck">CHECK NOW</button><a class="file" id="uget" target="_blank" rel="noopener" hidden></a></div>
 <div id="msg"></div><ol id="list"></ol></div>
 <script>
 const $=id=>document.getElementById(id);
@@ -120,18 +121,21 @@ try{tracks=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(tracks.filter(t=>!t.blob||t.id).map(t=>t.blob?{title:t.title,id:t.id,blob:1}:t)))}catch(e){}};
 // local files & recordings are kept in IndexedDB so they survive restarts (offline library)
 const idb=new Promise(r=>{try{const q=indexedDB.open('tp7',1);q.onupgradeneeded=()=>q.result.createObjectStore('f');q.onsuccess=()=>r(q.result);q.onerror=()=>r(null)}catch(e){r(null)}});
-const idbPut=(k,b)=>idb.then(d=>d&&new Promise(r=>{const t=d.transaction('f','readwrite');t.objectStore('f').put(b,k);t.oncomplete=()=>r(1);t.onerror=()=>r(0)}));
+const idbPut=(k,b)=>idb.then(d=>d&&new Promise(r=>{try{const t=d.transaction('f','readwrite');t.objectStore('f').put(b,k);t.oncomplete=()=>r(1);t.onerror=t.onabort=()=>r(0)}catch(e){r(0)}}));
 const idbGet=k=>idb.then(d=>d&&new Promise(r=>{const q=d.transaction('f').objectStore('f').get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>r()}));
 const idbDel=k=>idb.then(d=>d&&d.transaction('f','readwrite').objectStore('f').delete(k));
 let idc=0;
 const mkTrack=(b,title)=>({title,file:b,blob:1,id:Date.now().toString(36)+(idc++).toString(36)+Math.random().toString(36).slice(2,6)});
 const keep=(b,title)=>{const t=mkTrack(b,title);idbPut(t.id,b);return t};
-const idbPutAll=pairs=>idb.then(d=>d&&new Promise(r=>{const t=d.transaction('f','readwrite'),o=t.objectStore('f');pairs.forEach(([k,b])=>o.put(b,k));t.oncomplete=()=>r(1);t.onerror=()=>r(0)}));
-tracks=tracks.filter(t=>!t.yt&&(!t.blob||t.id)); // YouTube entries from older versions are dropped
+const idbPutAll=pairs=>idb.then(d=>d&&new Promise(r=>{try{const t=d.transaction('f','readwrite'),o=t.objectStore('f');pairs.forEach(([k,b])=>o.put(b,k));t.oncomplete=()=>r(1);t.onerror=t.onabort=()=>r(0)}catch(e){r(0)}})); // a full disk / quota error aborts the transaction: resolve instead of leaving it pending
+tracks=(Array.isArray(tracks)?tracks:[]).filter(t=>t&&!t.yt&&(!t.blob||t.id)); // YouTube entries from older versions are dropped; a damaged saved list can no longer stop the whole page from starting
 tracks.forEach(t=>{if(t.blob)t.ready=idbGet(t.id).then(b=>{if(b)t.src=URL.createObjectURL(b);else t.dead=1})});
 Promise.all(tracks.map(t=>t.ready)).then(()=>{tracks=tracks.filter(t=>!t.dead);if(cur>=tracks.length)cur=tracks.length?0:-1;{const L=lastSaved(),i=L?tracks.findIndex(x=>tkey(x)===L.k):-1;if(i>=0&&!playing()&&!E.buf){cur=i;resume=L;$('ttl').textContent=tracks[i].title;$('trk').textContent=String(i+1).padStart(2,'0')}}save();render()});
 try{navigator.storage.persist()}catch(e){}
 const msg=t=>$('msg').textContent=t||'';
+// anything that slips through shows up in the message line (rate-limited) instead of silently leaving the player half-working
+let errT=0;const showErr=m=>{const n=Date.now();if(n-errT<3000)return;errT=n;try{msg('Error: '+String(m).slice(0,140))}catch(_){}};
+addEventListener('error',e=>showErr(e.message));addEventListener('unhandledrejection',e=>showErr(e.reason&&e.reason.message||e.reason));
 const fmt=s=>{s=Math.max(0,s||0);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')};
 
 // ---------- speed / pitch / reverse state ----------
@@ -341,7 +345,7 @@ function fallback(t,i,autoplay,g,o){o=o||{};mode='e';E.buf=null;lite=!!o.lite;fr
  if(o.vis)msg('');
  else if(o.lite){msg('');if(rev){bgRev=true;rev=false;$('rev').classList.remove('on')}}
  else{msg(STREAMMSG);if(rev)setRev(false)}
- const go=a=>{const run=()=>{if(autoplay)a.play().catch(()=>msg('Press play to start.'))};
+ const go=a=>{const run=()=>{if(autoplay)a.play().catch(e=>{if(A!==a)return;const n=e&&e.name;msg(n==='NotAllowedError'?'Press play to start.':n==='AbortError'?'':'Could not play that file.')})};
   if(o.at>.05){const f=()=>{try{a.currentTime=o.at}catch(e){}run()};a.readyState>=1?f():a.addEventListener('loadedmetadata',f,{once:true})}else run()};
  // stage 0: direct (CORS) -> 1: via /api/proxy (real meter) -> 2: direct, simulated meter
  const attempt=stage=>{
@@ -559,6 +563,41 @@ if(!inApp)[['dlw',DL.win,'downloads/tp7-windows.zip'],['dla',DL.apk,'downloads/t
  if(u){a.href=u;a.hidden=false}
  else if(/^https?:/.test(location.protocol))fetch(def,{method:'HEAD'}).then(r=>{if(r.ok&&!/html/.test(r.headers.get('content-type')||'')){a.href=def;a.download='';a.hidden=false}}).catch(()=>{})});
 if('serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+// ---------- auto-update (Windows / Linux / Android apps only) ----------
+// The build workflow writes public/version.json ({tag,built}) into the app builds. It checks GitHub Releases for a newer release and shows a
+// download button; it never installs by itself (Android and Windows both need you to confirm the install). The website and a dev run have no
+// version.json, so the row stays hidden there. The switch is remembered on this device; ON is the default.
+const UREPO='Doge9901998/clankerslop',UKEY='tp7.autoupd',UCHK='tp7.updchk',UFND='tp7.updfound';
+function uOffer(f){const a=$('uget');a.href=f.href;a.textContent='⬇ UPDATE: '+f.tag;a.hidden=false}
+let uOn=true;try{uOn=localStorage.getItem(UKEY)!=='0'}catch(e){}
+let uBuild=null,uBusy=false;
+const uShow=()=>{$('uat').textContent='AUTO-UPDATE: '+(uOn?'ON':'OFF');$('uat').classList.toggle('on',uOn)};
+function uAsset(rel){const ua=navigator.userAgent,as=rel.assets||[];
+ const want=NATIVE?/\.apk$/i:/Windows/i.test(ua)?/tp7-setup\.exe$/i:/\.AppImage$/i;
+ const a=as.find(x=>want.test(x.name));return a?a.browser_download_url:rel.html_url}
+async function uCheck(manual){
+ if(uBusy||!uBuild||(!manual&&!uOn))return;
+ if(!manual){let l=0;try{l=+localStorage.getItem(UCHK)||0}catch(e){}if(Date.now()-l<6*36e5)return}
+ uBusy=true;
+ try{
+  const r=await fetch('https://api.github.com/repos/'+UREPO+'/releases?per_page=10',{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+  if(!r.ok)throw new Error('HTTP '+r.status);
+  const list=await r.json();
+  const rel=(Array.isArray(list)?list:[]).filter(x=>x&&!x.draft&&x.published_at).sort((a,b)=>Date.parse(b.published_at)-Date.parse(a.published_at))[0];
+  try{localStorage.setItem(UCHK,String(Date.now()))}catch(e){}
+  // /releases/latest would skip the "build-N" pre-releases the manual workflow makes, so the list is used. Only offer a different release that is also newer than this build.
+  if(rel&&rel.tag_name!==uBuild.tag&&Date.parse(rel.published_at)>Date.parse(uBuild.built)){
+   const f={tag:rel.tag_name,href:uAsset(rel)};try{localStorage.setItem(UFND,JSON.stringify(f))}catch(e){}uOffer(f);if(manual)msg('Update available: '+rel.tag_name)}
+  else{try{localStorage.removeItem(UFND)}catch(e){}$('uget').hidden=true;if(manual)msg('You have the latest version ('+uBuild.tag+').')}
+ }catch(e){if(manual)msg('Could not check for updates.')}
+ uBusy=false}
+$('uat').onclick=()=>{uOn=!uOn;try{localStorage.setItem(UKEY,uOn?'1':'0')}catch(e){}uShow();if(uOn){try{localStorage.removeItem(UCHK)}catch(e){}uCheck(false)}else $('uget').hidden=true};
+$('uck').onclick=()=>{msg('Checking for updates…');uCheck(true)};
+fetch('version.json',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(v=>{
+ if(!(NATIVE||/Electron/i.test(navigator.userAgent))||!v||!v.tag||isNaN(Date.parse(v.built)))return;
+ uBuild=v;$('upd').hidden=false;uShow();
+ if(uOn){try{const f=JSON.parse(localStorage.getItem(UFND)||'null');if(f&&f.tag&&f.tag!==v.tag&&/^https:/.test(f.href))uOffer(f)}catch(e){}} // a found update stays on screen between launches, not only for the launch that found it
+ uCheck(false)}).catch(()=>{});
 // ---- background / reopen resilience ----
 // the page can be killed while another app is in front; remember where we were, free spare memory when hidden, wake audio on return
 const LASTK='tp7.last';let resume=null;
