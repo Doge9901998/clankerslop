@@ -298,9 +298,12 @@ $('tape').onclick=()=>{tape=!tape;$('tape').classList.toggle('on',tape);applySpe
 function stopAll(){if(mAn){cancelAnimationFrame(mAn.raf);mAn=null}mm=1;killSrc();E.on=false;E.buf=null;E.rb=null;E.rw=null;E.dd=0;lite=freed=false;dropStandby();E.ov=null;E.pos=0;clearTimeout(eskT);eskT=null;killEl(A);A=null}
 // decoded audio is ~20x the file size in RAM, so phones get a much lower ceiling (bigger files stream through <audio> instead of being decoded)
 const MOBILE=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||!!(navigator.deviceMemory&&navigator.deviceMemory<=4);
-let LG=0;const MAXDEC=MOBILE?10e6:40e6;
-// phones also get a budget for the *decoded* size (a low-bitrate MP3 can be tiny on disk and still unpack to hundreds of MB)
-const DECMAX=MOBILE?Math.min(160,Math.max(60,(navigator.deviceMemory||4)*32))*1e6:1e12;
+// No size limit any more: any file is tried in the decoded engine. If the browser can't hold it (fetch/decode fails) it streams through <audio> as before.
+// Safety net for phones: the decode attempt is written down first and erased when it finishes, so if decoding a track kills the app, that track is
+// remembered (NODEC) and streams from then on instead of crashing it again on every try.
+let LG=0;const NODK='tp7.nodec',DECG='tp7.decg';
+const nodec=()=>{try{return JSON.parse(localStorage.getItem(NODK)||'[]')}catch(e){return[]}};
+(()=>{try{const k=localStorage.getItem(DECG);if(k){localStorage.removeItem(DECG);const l=nodec();if(!l.includes(k)){l.push(k);localStorage.setItem(NODK,JSON.stringify(l.slice(-50)))}}}catch(e){}})(); // a decode was still marked at startup: it never finished
 // Light mode (phones): plain listening streams through an <audio> element on the Web Audio graph (a few MB; live meter, speed, semitone pitch).
 // The decoded engine (74-230 MB) is only built when a feature needs it: reverse, scratch, tape-scrub, lever, speeds beyond what <audio> can do.
 const wantEngine=()=>rev||bgRev||wm==='scratch'||speed>ASMAX||speed<ASMIN;
@@ -316,11 +319,13 @@ async function getBuf(t,g){
  for(const u of t.blob?[t.src]:[t.src,'/api/proxy?url='+encodeURIComponent(t.src)]){
   try{const r=await fetch(u);if(r.ok){ab=await r.arrayBuffer();break}}catch(e){}
   if(g!==LG)return null}
- if(g!==LG||!ab||ab.byteLength>=MAXDEC)return null;
- if(MOBILE){const du=await probe(t.src);if(g!==LG)return null;if(du&&du*(ctx.sampleRate||48e3)*8>DECMAX)return null}
- try{await wkP;const b=await ctx.decodeAudioData(ab);return g===LG?b:null}catch(e){return null}}
+ if(g!==LG||!ab)return null;
+ const dk=tkey(t);if(nodec().includes(dk))return null; // decoding this one killed the app before
+ try{localStorage.setItem(DECG,dk)}catch(e){}
+ try{await wkP;const b=await ctx.decodeAudioData(ab);return g===LG?b:null}catch(e){return null}
+ finally{try{if(localStorage.getItem(DECG)===dk)localStorage.removeItem(DECG)}catch(e){}}}
 function takeResume(t){if(resume&&resume.k===tkey(t)){const v=Math.max(0,resume.t||0);resume=null;return v}return 0}
-const STREAMMSG='Streaming mode (file too large to hold in memory, or not decodable): speed limited to 0.06–16×, no reverse or scratch.';
+const STREAMMSG='Streaming mode (this file could not be loaded into memory, or not decodable): speed limited to 0.06–16×, no reverse or scratch.';
 async function load(i,autoplay=true){
  if(i<0||i>=tracks.length)return;cur=i;const t=tracks[i];bag.add(t);
  if(t.file&&!t.src)t.src=URL.createObjectURL(t.file); // created on first play, not at import
