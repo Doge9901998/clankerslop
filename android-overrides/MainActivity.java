@@ -41,13 +41,21 @@ public class MainActivity extends BridgeActivity {
     private static long lastRendererLoss = 0;
     private static final String PREFS = "tp7_diag";
     private static boolean reportShown = false;
+    private static boolean loopFinish = false; // finished because the web view keeps dying: that is NOT a normal close
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Did the previous run end with the user closing the app (swipe away / back button)? Then there is nothing to report.
+        boolean cleanBefore = false;
+        try {
+            SharedPreferences dp = getSharedPreferences(PREFS, MODE_PRIVATE);
+            cleanBefore = dp.getBoolean("clean", false);
+            dp.edit().putBoolean("clean", false).commit();
+        } catch (Throwable ignored) { }
         installCrashRecorder();
-        showLastExitReport();
+        showLastExitReport(cleanBefore);
 
         if (Build.VERSION.SDK_INT >= 33
                 && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
@@ -69,6 +77,7 @@ public class MainActivity extends BridgeActivity {
                     boolean crashLoop = now - lastRendererLoss < 4000;
                     lastRendererLoss = now;
                     if (crashLoop) {
+                        loopFinish = true;
                         MainActivity.this.finish();
                     } else {
                         MainActivity.this.runOnUiThread(new Runnable() {
@@ -104,8 +113,19 @@ public class MainActivity extends BridgeActivity {
         });
     }
 
+    /** Called when the activity ends. If the user closed the app, remember that, so the next start does not show a crash report. */
+    @Override
+    protected void onDestroy() {
+        try {
+            if (isFinishing() && !loopFinish) {
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("clean", true).commit();
+            }
+        } catch (Throwable ignored) { }
+        super.onDestroy();
+    }
+
     /** On start, explains an unexpected previous exit (only if it happened in the last 5 minutes, so ordinary background kills stay quiet). */
-    private void showLastExitReport() {
+    private void showLastExitReport(boolean cleanBefore) {
         if (reportShown) return;
         try {
             SharedPreferences sp = getSharedPreferences(PREFS, MODE_PRIVATE);
@@ -130,7 +150,8 @@ public class MainActivity extends BridgeActivity {
                     if (e.getTimestamp() > sp.getLong("exitSeen", 0)) {
                         sp.edit().putLong("exitSeen", e.getTimestamp()).apply();
                         int r = e.getReason();
-                        boolean normal = r == ApplicationExitInfo.REASON_EXIT_SELF || r == ApplicationExitInfo.REASON_USER_REQUESTED;
+                        // 1 self, 8 permission change, 10 user requested, 11 user stopped, 14 freezer, 15 permission revoked: ordinary
+                        boolean normal = cleanBefore || r == 1 || r == 8 || r == 10 || r == 11 || r == 14 || r == 15;
                         if (!normal && now - e.getTimestamp() < 300000L) {
                             sb.append("Android says the last run ended with: ").append(exitName(r))
                               .append("\nDetails: ").append(e.getDescription())

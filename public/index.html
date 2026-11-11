@@ -68,7 +68,7 @@ html[data-ed=al] #hub{background:linear-gradient(135deg,#cdced0 0,#d6d7d9 28%,#e
 .panel button,.file{height:36px;border:0;border-radius:9px;background:var(--pb);color:#eee;padding:0 12px;font-size:12px;font-weight:700;letter-spacing:.05em;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .stat{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-family:ui-monospace,monospace;font-size:11px;letter-spacing:.1em}
 .row{display:flex;gap:8px;margin-bottom:8px}.row button{flex:1}
-#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on,#lm.on,#uat.on,#uget{background:#ff4f12}#upd button{flex:1}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
+#rate,#pitch{flex:1.3!important;font-family:ui-monospace,monospace}#tape.on,#rev.on,#lm.on,#uat.on,#lyt.on,#uget{background:#ff4f12}#upd button,#lyr button{flex:1}a.file{text-decoration:none;flex:1}[hidden]{display:none!important}
 .panel input[type=text]{flex:1;min-width:0;height:36px;border:0;border-radius:9px;padding:0 12px;font-size:13px;background:var(--pi);color:var(--pif);box-shadow:0 1px 3px #0003 inset}
 #msg{font-size:11px;min-height:14px;margin-top:8px;opacity:.7}
 #list{list-style:none;margin:12px 0 0;padding:0;font-size:12px;max-height:200px;overflow:auto}
@@ -101,6 +101,7 @@ button,.side,.key{touch-action:manipulation}#lev,#knob,#wheel,#slow,#fast,#pdn,#
 <div class="row" style="margin-bottom:0"><label class="file" style="flex:1">+ FILES<input id="files" type="file" accept="audio/*" multiple hidden></label><button id="lm" title="Repeat mode: no loop / loop all / loop one / shuffle (L)">LOOP: OFF</button><button id="reel" title="Tape reel motor (as in the TP-7 system menu): spins in play and rec / only in play / off (then it neither spins nor scrubs)">REEL: BOTH</button></div>
 <div class="row" id="inst" style="margin:8px 0 0"><button id="pwa" title="Install as an offline app">⬇ INSTALL</button><a class="file" id="dlw" hidden>WINDOWS</a><a class="file" id="dla" hidden>ANDROID</a></div>
 <div class="row" id="upd" hidden style="margin:8px 0 0"><button id="uat" title="Check GitHub Releases for a newer version when the app starts (at most every 6 hours)">AUTO-UPDATE: ON</button><button id="uck">CHECK NOW</button><a class="file" id="uget" target="_blank" rel="noopener" hidden></a></div>
+<div class="row" id="lyr" hidden style="margin:8px 0 0"><button id="lyt" title="Send what is playing to your lyric server (app only)">LYRIC LINK: ON</button></div>
 <div id="msg"></div><ol id="list"></ol></div>
 <script>
 const $=id=>document.getElementById(id);
@@ -719,10 +720,11 @@ function doAct(a,x){
  else if(a==='seekforward')seek(T()+10)}
 // ---- lyric-status link: tell lyric_status_media.py (on the home server, via the tunnel) what is playing ----
 // The key (PHONE_KEY from the server's .env) is asked once and kept on this device only, so it never ends up in the public repo.
-// App only: nothing is sent from the website or the installed PWA. Set NP_HOST to '' to turn it off in the app too.
+// App only: nothing is sent from the website or the installed PWA. The LYRIC LINK switch in the panel turns it on/off (remembered on this device); set NP_HOST to empty to remove it entirely.
 const NP_HOST='https://dogelyric.dogetuff.dev';
 let npAsked=false;
-function npSend(t,st,pos,rate){if(!NP_HOST||!NATIVE)return;try{ // NATIVE is only set inside the Android/iOS app, so the website and the PWA never send anything
+const NPK='tp7.lyric';let npOn=true;try{npOn=localStorage.getItem(NPK)!=='0'}catch(e){}
+function npSend(t,st,pos,rate){if(!NP_HOST||!NATIVE||!npOn)return;try{ // NATIVE is only set inside the Android/iOS app, so the website and the PWA never send anything
  const name=t?String(t.title||'').replace(/\.[a-z0-9]{2,5}$/i,'').replace(/_/g,' ').trim():'';
  const pl=st==='playing'&&!!name;
  let key='';try{key=localStorage.getItem('tp7.npkey')||''}catch(e){}
@@ -757,6 +759,10 @@ if(NATIVE){
  ['play','pause','stop','previoustrack','nexttrack','seekto'].forEach(a=>{try{NATIVE.nativeCallback('MediaSession','setActionHandler',{action:a},d=>{if(d&&d.action)doAct(d.action,d.seekTime)})}catch(e){}});
  nm('setPlaybackState',{playbackState:'none'}); // clears a notification left over from a previous run
  fetch('icon-192.png').then(r=>r.blob()).then(b=>{const f=new FileReader();f.onload=()=>{ART=f.result;miM=''};f.readAsDataURL(b)}).catch(()=>{})} // album art for the notification
+// LYRIC LINK switch (app only): OFF sends nothing. Turning it off first tells the server nothing is playing, so the status clears.
+if(NATIVE&&NP_HOST){const lt=$('lyt'),shw=()=>{lt.textContent='LYRIC LINK: '+(npOn?'ON':'OFF');lt.classList.toggle('on',npOn)};$('lyr').hidden=false;shw();
+ lt.onclick=()=>{if(npOn){npSend(null,'none',0,1);npOn=false}else{npOn=true;miM=''} // miM='' makes the next tick resend what is playing
+  try{localStorage.setItem(NPK,npOn?'1':'0')}catch(e){}shw()}}
 setInterval(()=>mediaInfo(),400);
 // touch: dragged controls must never hand the gesture to page scrolling
 [lev,kb,W].forEach(el=>{el.addEventListener('touchmove',e=>{if(e.cancelable)e.preventDefault()},{passive:false});el.addEventListener('contextmenu',e=>e.preventDefault())});
