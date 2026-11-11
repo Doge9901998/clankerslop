@@ -115,7 +115,7 @@ public class MainActivity extends BridgeActivity {
 
     /** Called when the activity ends. If the user closed the app, remember that, so the next start does not show a crash report. */
     @Override
-    protected void onDestroy() {
+    public void onDestroy() { // public: BridgeActivity declares it public, and an override can't be less accessible
         try {
             if (isFinishing() && !loopFinish) {
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putBoolean("clean", true).commit();
