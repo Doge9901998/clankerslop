@@ -89,6 +89,23 @@ jobs:
           mkdir -p ~/.android
           if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > ~/.android/debug.keystore; else cp android-overrides/debug.keystore ~/.android/debug.keystore; fi
           keytool -list -keystore ~/.android/debug.keystore -storepass android -alias androiddebugkey | grep -i "SHA-256\|androiddebugkey"
+          # Gradle does not reliably pick the key up from ~/.android on the runner (the first attempt came out signed with the generated
+          # "Android Debug" key), so point the debug signing config at the key explicitly.
+          cp ~/.android/debug.keystore android/app/tp7.keystore
+          cat >> android/app/build.gradle <<'GRADLE'
+
+          android {
+              signingConfigs {
+                  debug {
+                      storeFile file('tp7.keystore')
+                      storeType 'pkcs12'
+                      storePassword 'android'
+                      keyAlias 'androiddebugkey'
+                      keyPassword 'android'
+                  }
+              }
+          }
+          GRADLE
           # each build needs a higher versionCode than the one before, or Android treats it as a downgrade
           G=android/app/build.gradle
           sed -i -E 's/versionCode [0-9]+/versionCode ${{ github.run_number }}/' "$G"
