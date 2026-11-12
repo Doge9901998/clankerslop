@@ -45,6 +45,7 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        registerPlugin(UpdaterPlugin.class); // in-app updater (download + install the new APK); must come before super.onCreate
         super.onCreate(savedInstanceState);
 
         // Did the previous run end with the user closing the app (swipe away / back button)? Then there is nothing to report.

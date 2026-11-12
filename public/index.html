@@ -574,7 +574,25 @@ if('serviceWorker'in navigator&&/^https?:/.test(location.protocol))navigator.ser
 // download button; it never installs by itself (Android and Windows both need you to confirm the install). The website and a dev run have no
 // version.json, so the row stays hidden there. The switch is remembered on this device; ON is the default.
 const UREPO='Doge9901998/clankerslop',UKEY='tp7.autoupd',UCHK='tp7.updchk',UFND='tp7.updfound';
-function uOffer(f){const a=$('uget');a.href=f.href;a.textContent='⬇ UPDATE: '+f.tag;a.hidden=false}
+let uCur=null,upRun=false;
+function uOffer(f){uCur=f;const a=$('uget');a.href=f.href;a.textContent='⬇ UPDATE: '+f.tag;a.hidden=false}
+// Android app: download the APK, hand it to Android's installer and close the app (native side: UpdaterPlugin.java). Android always asks for
+// one confirmation tap on installs from an app, and for "install unknown apps" permission the first time.
+const upCall=(m,o)=>NATIVE.nativePromise('Updater',m,o||{});
+const isApk=f=>f&&/\.apk($|\?)/i.test(f.href);
+async function uInstall(f){
+ if(!NATIVE||upRun||!isApk(f))return;upRun=true;
+ const a=$('uget'),label='⬇ UPDATE: '+f.tag;a.hidden=false;a.textContent='⬇ DOWNLOADING…';msg('Downloading update '+f.tag+'…');
+ const poll=setInterval(async()=>{try{const p=await upCall('progress');if(p&&p.total>0)a.textContent='⬇ DOWNLOADING '+Math.floor(p.done*100/p.total)+'%'}catch(e){}},500);
+ try{
+  try{await upCall('download',{url:f.href})}finally{clearInterval(poll)}
+  a.textContent='INSTALLING…';
+  const r=await upCall('install');
+  if(r&&r.needPermission){msg('Allow "Install unknown apps" for TP-7 in the screen that just opened, come back and tap the UPDATE button.');a.textContent=label}
+  else msg('Confirm the install on the next screen. TP-7 closes itself now.') // the plugin closes the app once Android shows the confirmation
+ }catch(e){msg(String(e&&e.message||e).slice(0,300));a.textContent=label}
+ upRun=false}
+$('uget').addEventListener('click',e=>{if(NATIVE&&isApk(uCur)){e.preventDefault();uInstall(uCur)}}); // elsewhere the link just opens the download
 let uOn=true;try{uOn=localStorage.getItem(UKEY)!=='0'}catch(e){}
 let uBuild=null,uBusy=false;
 const uShow=()=>{$('uat').textContent='AUTO-UPDATE: '+(uOn?'ON':'OFF');$('uat').classList.toggle('on',uOn)};
@@ -593,7 +611,10 @@ async function uCheck(manual){
   try{localStorage.setItem(UCHK,String(Date.now()))}catch(e){}
   // /releases/latest would skip the "build-N" pre-releases the manual workflow makes, so the list is used. Only offer a different release that is also newer than this build.
   if(rel&&rel.tag_name!==uBuild.tag&&Date.parse(rel.published_at)>Date.parse(uBuild.built)){
-   const f={tag:rel.tag_name,href:uAsset(rel)};try{localStorage.setItem(UFND,JSON.stringify(f))}catch(e){}uOffer(f);if(manual)msg('Update available: '+rel.tag_name)}
+   const f={tag:rel.tag_name,href:uAsset(rel)};try{localStorage.setItem(UFND,JSON.stringify(f))}catch(e){}uOffer(f);if(manual)msg('Update available: '+rel.tag_name);
+   // AUTO-UPDATE on: start the download/install by itself, once per new version (a cancelled install is not retried on every launch; the button still works)
+   let tried='';try{tried=localStorage.getItem('tp7.updtry')||''}catch(e){}
+   if(NATIVE&&uOn&&isApk(f)&&tried!==f.tag){try{localStorage.setItem('tp7.updtry',f.tag)}catch(e){}uInstall(f)}}
   else{try{localStorage.removeItem(UFND)}catch(e){}$('uget').hidden=true;if(manual)msg('You have the latest version ('+uBuild.tag+').')}
  }catch(e){if(manual)msg('Could not check for updates.')}
  uBusy=false}
